@@ -1,23 +1,25 @@
-<span style="background-color: green">Можно компилиривать как при помощи gcc, так и cc - второй слздаст файл a.out. Или, как у gcc, можно добавить флаг -o и скомпилить файл с нужным именем.</span>
+> <span style="background-color: green">Можно компилиривать как при помощи gcc, так и cc - второй слздаст файл a.out. Или, как у gcc, можно добавить флаг -o и скомпилить файл с нужным именем.</span>
 
-<span style="background-color:green">===Директивы препроцессора===</span><br>
+> C имеет две потенциальные <span style="color:orange">среды выполнения:
+1. <span style="color:orange">минимальную - freestanding</span>
+2. <span style="color:orange">полноценную - hosted</span><br>
+
+> <span style="background-color:red; color:black">---Минимальная среда выполнения---</span>
+1. Может существовать вне ОС
+2. Используется в создании встраиваемых систем
+3. Предоставляет минимальный набор библиотечных функций, а объявление точки входа отличается в разных реализациях
+
+## <span style="background-color:green">Директивы препроцессора</span><br>
 <span style="color:violet">#include</span> - ведет себя так, будто вместо нее подставляется содержимое указанного файла. По сути, подключает нужный файл.
+
+## <span style="background-color:green">Стандартные библиотеки</span><br>
 
 <span style="color:violet">stdio.h</span> - I/O - содержит методы ввода/вывода.
 stdlib.h - функции общего назначения.
 
-<span style="background-color:green">===Входная точка программы===</span>
+## <span style="background-color:green">Входная точка программы</span>
 
 <span style="color:violet">int main()</span>  - входная точка программы
-
-C имеет две потенциальные <span style="color:orange">среды выполнения:
-1. <span style="color:orange">минимальную - freestanding</span>
-2. <span style="color:orange">полноценную - hosted</span><br>
-
-<span style="background-color:red; color:black">---Минимальная среда выполнения---</span>
-1. Может существовать вне ОС
-2. Используется в создании встраиваемых систем
-3. Предоставляет минимальный набор библиотечных функций, а объявление точки входа отличается в разных реализациях
 
 <span style="color:violet">(void)</span> - даёт понять, что main <span style="color:orange">ничего не принимает.</span>
 
@@ -52,13 +54,13 @@ C имеет две потенциальные <span style="color:orange">сре
 Также есть <span style="color:violet">алфавитные управляющие последовательности</span>, необходимые для вывода неотображаемых символов. Возможные:
 1. <span style="color:violet">\n</span> - перевод строки
 
-<span style="background-color:green">===БИБЛИОТЕЧНЫЕ МЕТОДЫ и МАКРОСЫ=== </span><br>
+## <span style="background-color:green">===БИБЛИОТЕЧНЫЕ МЕТОДЫ и МАКРОСЫ===</span>
 
-<span style="color:violet">int puts(const char*)</span>
+## <span style="color:violet">**int puts(const char*)**</span>
 1. записывает полученный аргумент в поток <span style="color:orange">stdout (консоль или терминал)</span>, добавляя к выводу '\n'
 2. если во время вывода возникла ошибка, возвращается макрос EOF (представляющий отрицательное число) - иначе целое неотрицательное значение
     
-<span style="color:violet">EXIT_SUCCESS</span>
+<span style="color:violet">**EXIT_SUCCESS'**</span>
 1. макрос, зачастую имеет такое определение - #define EXIT_SUCCESS 0
 
 <span style="color:violet">EOF</span>
