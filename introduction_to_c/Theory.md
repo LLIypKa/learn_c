@@ -9,58 +9,59 @@
 2. Используется в создании встраиваемых систем
 3. Предоставляет минимальный набор библиотечных функций, а объявление точки входа отличается в разных реализациях
 
-## <span style="background-color:green">Директивы препроцессора</span><br>
-<span style="color:violet">#include</span> - ведет себя так, будто вместо нее подставляется содержимое указанного файла. По сути, подключает нужный файл.
-
-## <span style="background-color:green">Стандартные библиотеки</span><br>
-
-<span style="color:violet">stdio.h</span> - I/O - содержит методы ввода/вывода.
-stdlib.h - функции общего назначения.
-
-## <span style="background-color:green">Входная точка программы</span>
-
-<span style="color:violet">int main()</span>  - входная точка программы
-
-<span style="color:violet">(void)</span> - даёт понять, что main <span style="color:orange">ничего не принимает.</span>
-
-Программы на C состоят из <span style="color:orange">процедур (функций, методов)</span>, которые:
+> Программы на C состоят из <span style="color:orange">процедур (функций, методов)</span>, которые:
 1. имеют определённый тип и могут возвращять определённые значения (тип функции = тип возвращаемого значения)
 2. могут принимать аргументы
 
+# <span style="background-color:green">Директивы препроцессора</span><br>
+<span style="color:violet">#include</span> - ведет себя так, будто вместо нее подставляется содержимое указанного файла. По сути, подключает нужный файл.
+
+# <span style="background-color:green">Стандартные библиотеки</span><br>
+
+<span style="color:violet">stdio.h</span> - I/O - содержит методы ввода/вывода.<br>
+<span style="color:violet">stdlib.h</span> - функции общего назначения.<br>
+
+# <span style="background-color:green">Входная точка программы</span>
+
+<span style="color:violet">int main()</span>  - входная точка программы<br>
+<span style="color:violet">(void)</span> - даёт понять, что main <span style="color:orange">ничего не принимает.</span>
+
 Предназанчение возаращемого функцией main значения - <span style="color:orange">указать, как завершилась программа - успешно или нет</span>
 
-<span style="background-color:red; color:black">---Как происходит вход/выход в/из программы:---</span><br>
+## <span style="background-color:red; color:black">---Как происходит вход/выход в/из программы:---</span><br>
 
-1. ВХОД <br>
-    main - входная точка, выполняемая при запуске программы<br>
-    выполняется функция main в серверной среде, после запуска из командной строки или другой программы
+### ВХОД 
+main - входная точка, выполняемая при запуске программы
+выполняется функция main в серверной среде, после запуска из командной строки или другой программы
 
-2. ВЫХОД 
-    return (0 или 1, или макросы, представляющие эти значения) - выход из программы -- среда исполнения получает возврат из функции main, по которому может проверить состояние проги и определить, насколько успешен был вызов.
+### ВЫХОД 
+return (0 или 1, или макросы, представляющие эти значения) - выход из программы -- среда исполнения получает возврат из функции main, по которому может проверить состояние проги и определить, насколько успешен был вызов.
 
-3. return __value__ в main = exit(__value__) 
+### ЗАМЕЧАНИЯ 
+return __value__ в main = exit(__value__) 
 
-<span style="background-color:green">===ФОРМАТИРОВАННЫЙ ВЫВОД===</span><br>
+# <span style="background-color:green">ФОРМАТИРОВАННЫЙ ВЫВОД</span><br>
 
 <span style="color:violet">printf</span> (или ее вариации) - функция, для форматированного вывода. Принимает строку, которая описывет формат вывода и произвольное количество аргументов, представляющих значения для вывода
 
-Возможные <span style="color:orange">__спецификаторы формата__</span> (не все)
+## <span style="background-color:red; color:black">__Спецификаторы формата__</span> (не все)
 1. <span style="color:violet">%s</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">строку</span>
 2. <span style="color:violet">%d</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">целое число</span>
 3. <span style="color:violet">%f</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">число с плавающей точкой</span>
 4. <span style="color:violet">%c</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">символ</span>
 5. <span style="color:violet">%x</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">шестнадцатиричное число</span>
 
-Также есть <span style="color:violet">алфавитные управляющие последовательности</span>, необходимые для вывода неотображаемых символов. Возможные:
+## <span style="background-color:red; color:black">Алфавитные управляющие последовательности</span>
+Необходимы для вывода неотображаемых символов. Список последовательностей:
 1. <span style="color:violet">\n</span> - перевод строки
 
-## <span style="background-color:green">===БИБЛИОТЕЧНЫЕ МЕТОДЫ и МАКРОСЫ===</span>
+# <span style="background-color:green">БИБЛИОТЕЧНЫЕ МЕТОДЫ И МАКРОСЫ</span>
 
-## <span style="color:violet">**int puts(const char*)**</span>
+<span style="color:violet">int puts(const char*)</span>
 1. записывает полученный аргумент в поток <span style="color:orange">stdout (консоль или терминал)</span>, добавляя к выводу '\n'
 2. если во время вывода возникла ошибка, возвращается макрос EOF (представляющий отрицательное число) - иначе целое неотрицательное значение
     
-<span style="color:violet">**EXIT_SUCCESS'**</span>
+<span style="color:violet">**EXIT_SUCCESS**</span>
 1. макрос, зачастую имеет такое определение - #define EXIT_SUCCESS 0
 
 <span style="color:violet">EOF</span>
