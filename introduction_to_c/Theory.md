@@ -1,4 +1,4 @@
-> <span style="background-color: green">Можно компилиривать как при помощи gcc, так и cc - второй создаст файл a.out. Или, как у gcc, можно добавить флаг -o и скомпилить файл с нужным именем.</span>
+> <span style="background-color: green">Можно скомпилиривать как при помощи gcc, так и cc - второй создаст файл a.out. Или, как у gcc, можно добавить флаг -o и скомпилить файл с нужным именем.</span>
 
 > C имеет две потенциальные <span style="color:orange">среды выполнения:
 1. <span style="color:orange">минимальную - freestanding</span>
@@ -61,17 +61,17 @@ return __value__ в main = exit(__value__)
         return 0;
     }
 
-Вывод уязвимой версии может показать:
+>Вывод уязвимой версии может показать:
 0041a2c0 00000001 7ffd42a8 0041a2c0
 (это служебные данные из стека - УТЕЧКА ИНФОРМАЦИИ!)
 </span>
 
 ## <span style="background-color:red; color:black">__Спецификаторы формата__</span> (не все)
-1. <span style="color:violet">%s</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">строку</span>
-2. <span style="color:violet">%d</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">целое число</span>
-3. <span style="color:violet">%f</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">число с плавающей точкой</span>
-4. <span style="color:violet">%c</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">символ</span>
-5. <span style="color:violet">%x</span> - спецификатор формата, позволяющая вывести очередной аргумент - <span style="color:orange">шестнадцатиричное число</span>
+1. <span style="color:violet">%s</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">строку</span>
+2. <span style="color:violet">%d</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">целое число</span>
+3. <span style="color:violet">%f</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">число с плавающей точкой</span>
+4. <span style="color:violet">%c</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">символ</span>
+5. <span style="color:violet">%x</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">шестнадцатиричное число</span>
 
 ## <span style="background-color:red; color:black">Алфавитные управляющие последовательности</span>
 Необходимы для вывода неотображаемых символов. Список последовательностей:
