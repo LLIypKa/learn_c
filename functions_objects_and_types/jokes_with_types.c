@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <locale.h>
+#include <wchar.h>
 
 int main(void) {
     setlocale(LC_ALL, "");
@@ -10,9 +11,11 @@ int main(void) {
     bool boolen = true;
 
     wchar_t t = L'з';
+    wchar_t message[] = L"Привет, мир!"; 
 
-    printf("%d %d\n", boolean, boolen);
+    wprintf(L"%d %d\n", boolean, boolen);
+    wprintf(L"%lc\n", t);
+    wprintf(L"%ls\n", message);
 
-    printf("%lc\n", t);
     return EXIT_SUCCESS;
 }

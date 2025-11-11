@@ -212,7 +212,11 @@ int main() {
 3. Обычно занимает 16 или 32 бита
 4. Стандартная библиотека предоставляет функции для работы с char и wchar_t
 
-> <span style="background-color:red; color: black">__АЛАРМ!__</span> При инициализации значения wchar_t нужно использовать <span style="color:orange">_L_</span> перед литералом строки или символа - для того, чтобы была работа именно с wchar_t, работающим с символами юникода, а также нужен <span style="color:orange">_setlocale(LC_ALL, "");_</span> - для обозначения работы с другими локалями (не английской, в данном случае - в локали окружения). Пример в functions_objects_and_types/jokes_with_types.c. Также есть функции для работы с широкими символами, например <span style="color:orange">_wprintf_</span> из библиотеки <span style="color:orange">_wchar.h_</span> - её лучше использовать для вывода несольких широких символов или при смеашанном выводе
+> <span style="background-color:red; color: black">__АЛАРМ!__</span> При инициализации значения wchar_t нужно использовать <span style="color:orange">_L_</span> перед литералом строки или символа - для того, чтобы была работа именно с wchar_t, работающим с символами юникода, а также нужен <span style="color:orange">_setlocale(LC_ALL, "");_</span> - для обозначения работы с другими локалями (не английской, в данном случае - в локали окружения). Также есть функции для работы с широкими символами, например <span style="color:orange">_wprintf_</span> из библиотеки <span style="color:orange">_wchar.h_</span> - её лучше использовать для вывода нескольких широких символов или при смешанном выводе
+
+> <span style="background-color:red; color: black">__АЛАРМ v2!__</span> Одновременно использовать <span style="color:orange">_printf_</span> и <span style="color:orange">_wprintf_</span> нельзя - после использования <span style="color:orange">_printf_</span> выходной поток переходит в <span style="color:orange">_байтовый_</span> режим (а не <span style="color:orange">_широкий_</span>), соответственно, нужно использовать какую-то одну - или <span style="color:orange">_printf_</span>, или <span style="color:orange">_wprintf_</span>.
+
+> Примеры в functions_objects_and_types/jokes_with_types.c.
 
 ## <span style="background-color:green">ФУНКЦИИ</span>
 
