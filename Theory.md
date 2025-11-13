@@ -30,6 +30,7 @@ C имеет две потенциальные _<span style="color:orange">_ср
 <span style="color:violet">__limits.h__</span> - файл, который определяет константы, связанные с ограничениями типов данных.<br>
 <span style="color:violet">__stdint.h__</span> - файл, позволяющий работать с целочисленными типами.<br>
 <span style="color:violet">__inttypes.h__</span> - файл, который определяет константы, связанные с ограничениями типов данных.<br>
+<span style="color:violet">__string.h__</span> - файл, предоставляющий функции для работы со строками.<br>
 
 ## <span style="background-color:green">Входная точка программы</span>
 
@@ -101,6 +102,9 @@ int main() {
 
 <span style="color:violet">__EOF__</span>
 1. макрос
+
+<span style="color:violet">__char *strcpy (char *__restrict __dest, const char *__restrict __src)__</span>
+Копирует в <span style="color:orange">_dest_</span> значение <span style="color:orange">_src_</span>. Аналог для широких символов <span style="color:violet">__wcscpy__</span>
 
 ## <span style="background-color:green">КОМПИЛЯТОРЫ</span>
 ### <span style="background-color:red; color:black">GNU Compiler Collection</span>
@@ -341,7 +345,9 @@ void swap(int* a, int* b) { //параметры, при вызове функц
 
 <span style="color:orange">_Квадратные скобки ([]) используются для идентификации элемента массива_</span>.
 
-Идентификатор массива - это <span style="color:orange">_укзатаель на первый элемент массива_</span>.
+Идентификатор массива - это, по сути, <span style="color:orange">_укзатаель на первый элемент массива_</span>.
+
+> <span style="background-color:red; color: black">__АЛАРМ!__</span> массив и указатель — не одно и то же, но в контексте использования массива в выражениях он преобразуется в указатель.
 
 <span style="background-color:red; color: black">__АЛАРМ!__</span> Индексация в массиве с 0.
 
@@ -353,7 +359,7 @@ int main(void) {
     char* array_member = str + 5;
 }
 ``` 
-> В силу того, что элементы массива находятся в памяти ровно друг за другом, то проблем со смещением указателя не возникнет. Кстати, операция str + 5 эквивалентна операции &str[5]. P.S.NAGGER ответь: почему так?
+> В силу того, что элементы массива находятся в памяти ровно друг за другом, то проблем со смещением указателя не возникнет. Кстати, операция str + 5 эквивалентна операции &str[5]. P.S. NAGGER, ответь: почему так?
 
 > Двумерные массивы (к слову, массивы могут быть <span style="color:orange">_многомерными_</span>) называют <span style="color:orange">_матрицами_</span>. По сути, <span style="color: violet">__многомерный массив__</span> - это <span style="color:orange">_массив массивов_</span>.
 
@@ -367,6 +373,7 @@ int main(void) {
     func(arr[i]);
 }
 
+//в самой функции int arr[5] - превращается в указатель на первый элемент массива
 void func(int arr[5]) {
     int x = arr[j];
 
@@ -392,6 +399,29 @@ void func(int arr[5]) {
 
 > Чем-то похож на тип данных <span style="color:orange">_record ("запись")_</span> из других ЯП (например, Java)
 
+```c
+struct NAGGER {
+    wchar_t name[255];
+    wchar_t catchphrase[255];
+    double money;
+};
+```
+> У структуры 3 <span style="color:orange">_объекта-члена_</span>. Какие?
+
+Позволяют объявлять коллекции связанныъ между собой объектов. Могут использваться для представления даты, данных клиентов и т.п.
+
+Полезны для представления и группирования похожих объектов, часто передающихся вместе в виде аргументов функций - тогда объекты не приходится передавать по отдельности.
+
+Для доступа к полям используется <span style="color:orange">_операция доступа (.)_</span>, а если работать с указателем на структуру - <span style="color:orange">_операция доступа (->)_</span>
+
+#### <span style="background-color:green">ОБЪЕДИНЕНИЯ</span>
+
+Чем-то похожи на структуры, но есть одно большая разница - члены объединения используют одну и ту же память. 
+
+> В один момент времени объединение может содержать объект одного типа, а в другой момент времени — объект другого типа, но <span style="color:orange">_никогда не может содержать оба объекта сразу_</span>.
+
+Используется в основном для <span style="color:orange">_экономии памяти_</span>
+
 ### <span style="background-color:green">ОПРЕДЕЛЕНИЯ ТИПОВ</span>
 
 <span style="color: violet">__typedef__</span> - используется для создания псевдонима для <span style="color:orange">_существующего_</span> типа. 
@@ -399,8 +429,6 @@ void func(int arr[5]) {
 <span style="background-color:red; color: black">__АЛАРМ!__</span> НОВОГО ТИПА typedef <span style="color:orange">_НЕ СОЗДАЁТ_</span>.
 
 > Идентификаторы, находящиеся в стандартных заголовочных файлах и заканчивающиеся на <span style="color:orange">__t_</span>, являются <span style="color:orange">_определениями типов_</span> (псевдонимами для существующих типов). Программистам не нужно соблюдать это соглашение - стандарт C резервирует все такие идентификатора, соответствующие шаблонам <span style="color:orange">_int[0-9a-z_]*_t_</span> и <span style="color:orange">_uint[0-9a-z_]*_t_</span>, а спецификация <span style="color:orange">_POSIX (Portable Operating System Interface — переносимый интерфейс операционных систем)_</span> резервирует все идентификаторы, которые заканчиваются на <span style="color:orange">__t_</span>. В случае определения идентификатора с таким именем может возникнуть конфликт с именами, которые используются реализацией. Это, в свою очередь, может спровоцировать проблемы, которые будет сложно диагностировать.
-
-> <span style="background-color:red; color: black">__АЛАРМ!__</span> 
 
 ## <span style="background-color:green">ФУНКЦИИ</span>
 
