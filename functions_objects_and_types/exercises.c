@@ -26,21 +26,19 @@ void min(int a, int b) {
     printf("from %d and %d lower %d\n", a, b, min);
 }
 
+void func_call(void (*arr[])(int, int), int index) {
+    int a = 100, b = 1000;
+    arr[index](a, b);
+}
+
 int main(void) {
     for (int i = 0; i < 5; i++) {
         printf("%d\n", retrieve(increment()));
     }
 
-    int a = 100, b = 1000;
-
-    void (*function_sum_ptr)(int, int) = sum;
-    void (*function_max_ptr)(int, int) = max;
-    void (*function_min_ptr)(int, int) = min;
-
-    void (*func_ptrs_arr[3])(int, int) = {function_sum_ptr, function_max_ptr, function_min_ptr};
-    for (int i = 0; i < 3; i++) {
-        func_ptrs_arr[i](a, b);
-    }
+    void (*func_ptrs_arr[3])(int, int) = {sum, max, min};
+    func_call(func_ptrs_arr, 2);
 
     return EXIT_SUCCESS;
 }
+
