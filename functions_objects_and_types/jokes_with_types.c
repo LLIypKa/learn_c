@@ -7,6 +7,13 @@
 #include <wchar.h>
 #define month_count 12
 
+struct NAGGER {
+    int a;
+    int b;
+};
+
+typedef struct NAGGER nigga;
+
 enum months {
     jan = 1,
     feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
@@ -21,6 +28,8 @@ int main(void) {
     enum months_v2 months_v2[] = { jan_v2, feb_v2, mar_v2, apr_v2, may_v2, jun_v2, jul_v2, aug_v2, sep_v2, oct_v2, nov_v2, dec_v2, months_count };
 
     setlocale(LC_ALL, "");
+
+    nigga nagger;
     //Оба варианта допустимы
     _Bool boolean = 1;
     bool boolen = true;
