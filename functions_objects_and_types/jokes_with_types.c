@@ -12,7 +12,7 @@ struct NAGGER {
     int b;
 };
 
-typedef struct NAGGER nigga;
+typedef struct NAGGER nagger;
 
 enum months {
     jan = 1,
@@ -29,7 +29,7 @@ int main(void) {
 
     setlocale(LC_ALL, "");
 
-    nigga nagger;
+    nagger nagger;
     //Оба варианта допустимы
     _Bool boolean = 1;
     bool boolen = true;

@@ -4,7 +4,7 @@
 #include <locale.h>
 #include <string.h> 
 
-#define NAGGERS_CATCHPHRASE L"НИ ГАни, НИГГАдяй"
+#define NAGGERS_CATCHPHRASE L"Запомни эту фразу - всё будет, но не сразу"
 #define NAGGERS_NAME L"NAGGER"
 
 struct NAGGER {
@@ -13,7 +13,7 @@ struct NAGGER {
     double money;
 };
 
-typedef struct NAGGER nigga;
+typedef struct NAGGER nagger;
 
 int main(void) {
     setlocale(LC_ALL, "");
@@ -21,8 +21,8 @@ int main(void) {
     //тут можно упростить, ничего не изменится, просто я хочу потренироваться с явным указанием выравнивания
     //явно работать с вырваниванием нет смысла, если того не требуют условия - работа с сырой памятью, 
     //с кастомными аллокатарами или какие-нибудь другие специфические условия
-    _Alignas(nigga) nigga buffer;
-    nigga* nagger = &buffer;
+    _Alignas(nagger) nagger buffer;
+    nagger* nagger = &buffer;
 
     //для рабочего проекта сюда надо использовать wcsncpy с указанием кол-ва символов, копируемых в nagger->...
     //потому как в реальности, может выйти так, что место, куда копируется инфа, может оказаться меньше самой инфы
@@ -31,7 +31,8 @@ int main(void) {
     wcscpy(nagger->catchphrase, NAGGERS_CATCHPHRASE);
     nagger->money = 1000.0;
 
-    wprintf(L"Меня зовут %ls, я всегда говорю \"%ls\", у меня есть %f денег\n", nagger->name, nagger->catchphrase, nagger->money);
+    wprintf(L"Меня зовут %ls, я всегда говорю \"%ls\", у меня есть %f денег\n", 
+        nagger->name, nagger->catchphrase, nagger->money);
 
     return EXIT_SUCCESS;
 }
