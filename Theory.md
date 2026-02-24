@@ -745,11 +745,11 @@ struct nagger {
 
 3. Адрес, удовлетворяющий строгому выравниванию, автоматически удовлетворяет и более слабым (меньшим) выравниваниям.
 
-# <span style="background-color:green">АРИФМЕТИЧЕСКИЕ ТИПЫ</span>
+# <span style="background-color:green">3 АРИФМЕТИЧЕСКИЕ ТИПЫ</span>
 
 Включают целые числа + числа с плавающей точкой
 
-## <span style="background-color:green">ЦЕЛЫЕ ЧИСЛА</span>
+## <span style="background-color:green">3.1 ЦЕЛЫЕ ЧИСЛА</span>
 
 > Мы о них уже говороли, когда разбирали [целочисленные типы](#целочисленные-типы). Вкратце, это <span style="color:orange">_int_</span> и его подтипы с модификаторами (<span style="color:orange">_long_</span>, <span style="color:orange">_short_</span>, <span style="color:orange">_insigned_</span>)
 
@@ -761,7 +761,7 @@ struct nagger {
 2. как и было указано в [целочисленых типах](#целочисленные-типы), можно опустить <span style="color:orange">_int_</span>, если это не единственное ключевое слово
 3. то же и с signed-типами - <span style="color:orange">_signed_</span> при объявлении можно опустить, т.к. все целочисленные типы по умолчанию <span style="color:orange">_знаковые_</span> (исключение, опять же, <span style="color:orange">_char_</span> - signed char и просто char без него не отличить)
 
-### <span style="background-color:green">ЗАПОЛНЕНИЕ И ТОЧНОСТЬ</span>
+### <span style="background-color:green">3.1.1 ЗАПОЛНЕНИЕ И ТОЧНОСТЬ</span>
 
 <span style="color: violet">__Заполнение__</span> - неиспользуемые биты, которые могут содержаться в всех целых типах (кроме <span style="color:orange">_char_</span>, <span style="color:orange">_signed char_</span> и <span style="color:orange">_unsigned char_</span>). Позволяют <span style="color:orange">_реализации_</span> обходить ошибки или особенности аппаратной платформы (например, пропуск знакового бита между несколькими машинными словами), а также поддерживать целевую архитектуру.
 
@@ -769,7 +769,7 @@ struct nagger {
 
 <span style="color: violet">__Точность__</span>  - количество битов, которые используются для представления значения, не включая <span style="color:orange">_знаковый бит_</span> и <span style="color:orange">_заполнение_</span>.
 
-### <span style="background-color:green">ЗАГОЛОВОЧНЫЙ ФАЙЛ limits.h</span>
+### <span style="background-color:green">3.1.2 ЗАГОЛОВОЧНЫЙ ФАЙЛ limits.h</span>
 
 Предоставляет минимальные и максимальные значения целочисленных типов.
 
@@ -787,11 +787,11 @@ struct nagger {
 2. каждый целочисленный тип должен поддерживать минимальный диапазон значений, применимый в любой реализации
 3. меньший тип не может быть шире большего
    
-### <span style="background-color:green">БЕЗЗНАКОВЫЕ ЦЕЛЫЕ</span>
+### <span style="background-color:green">3.1.3 БЕЗЗНАКОВЫЕ ЦЕЛЫЕ</span>
 
 Диапазон начинается с нуля и заканчивается числами, большими, чем верхние границы соответствующих знаковых типов (см. ariphmetic_types/jokes_with_ariphmetic_types.c), поэтому часто применяются для представления <span style="color:orange">_больших неотрицательных чисел_</span>.
 
-#### <span style="background-color:green">ПРЕДСТАВЛЕНИЕ</span>
+#### <span style="background-color:green">3.1.3.1 ПРЕДСТАВЛЕНИЕ</span>
 Значения представляются <span style="color:orange">_без смещения_</span>, в сугубо <span style="color:orange">_двоичной системе_</span>: самый младший бит имеет вес 2 ^ 0, следующий за ним — 2 ^ 1 и т.д. <span style="color: violet">__Значение двоичного числа__</span> — это сумма весов всех битов.
 
 > Пример представления значения в разных системах счисления (без заполнения)
@@ -830,7 +830,7 @@ struct nagger {
 |ULONG_MAX|2^32 - 1 = 4 294 967 295|2^32 - 1 = 4 294 967 295|unsigned long int|
 |ULLONG_MAX|2^64 - 1 = 18 446 744 073 709 551 615|2^64 - 1 = 18 446 744 073 709 551 615|unsigned long long int|
 
-#### <span style="background-color:green">ЦИКЛИЧЕСКИЙ ПЕРЕНОС</span>
+#### <span style="background-color:green">3.1.3.2 ЦИКЛИЧЕСКИЙ ПЕРЕНОС</span>
 
 <span style="color: violet">__Циклический перенос (wraparound)__</span> - определённое поведение (в языке C), проявляющееся тогда, когда при выполнении арифметической операции над беззнаковыми результат оказывается либо <span style="color:orange">_слишком мал_</span> (< 0), либо <span style="color:orange">_слишком велик_</span> (> 2 ^ N - 1), чтобы его можно было представить как беззнаковое. В таком случае, полученное значение <span style="color:orange">_делится с остатком_</span> на 2 ^ N и остаток сохраняется в объект.
 
@@ -857,7 +857,7 @@ else
 
 <span style="background-color:red; color: black">__АЛАРМ!__</span> Ширина, используемая при переносе, зависит от реализации.
 
-### <span style="background-color:green">ЗНАКОВЫЕ ЦЕЛЫЕ</span>
+### <span style="background-color:green">3.1.4 ЗНАКОВЫЕ ЦЕЛЫЕ</span>
 
 Используются для представления отрицательных, нулевых и положительных значений. Диапазон значений зависит, от того, какая у данного типа <span style="color:orange">_ширина_</span> в используемой системе.
 
