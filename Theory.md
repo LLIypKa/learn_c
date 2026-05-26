@@ -2095,3 +2095,83 @@ default: abort();
 *   Наличие default <span style="color:orange">_может подавлять_</span> такие предупреждения, поэтому предпочтительнее использовать предупреждения компилятора, а не полагаться только на default.
 
 > Для примеров перейди в файл control_logic/jokes_with_choices_operators.c
+
+## <span style="background-color:#00AB00">5.4 Операторы итерирования</span>
+
+Операторы итерирования (<span style="color:violet">__циклы__</span>) позволяют выполнять вложенные операторы произвольное количество раз (в том числе ноль) в зависимости от критерия завершения. К ним относятся <span style="color:orange">_while_</span>, <span style="color:orange">_do...while_</span> и <span style="color:orange">_for_</span>.
+
+### <span style="background-color:#008D00">5.4.1 Оператор while</span>
+
+<span style="color:violet">__while__</span> выполняет тело цикла, пока управляющее выражение не станет равным 0. Проверка условия происходит перед каждой итерацией (цикл с предусловием). Если условие изначально не выполняется, операторы в теле цикла не будут выполняться
+
+Реализация memset с while:
+
+```c
+void *memset(void *dest, int val, size_t n) {
+    unsigned char *ptr = (unsigned char*)dest;
+    while (n-- > 0)
+        *ptr++ = (unsigned char)val;
+    return dest;
+}
+```
+
+Управляющее выражение `n-- > 0` декрементирует счётчик и проверяет его. Цикл выполняется ровно `n` раз. Указатель `ptr` последовательно заполняет байты от `dest` до `dest + n - 1`.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Если n выходит за границу объекта, происходит запись в постороннюю память - <span style="color:orange">_переполнение буфера_</span>, неопределённое поведение и распространённая уязвимость.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Чтобы избежать бесконечного цикла, инициализируйте все переменные в условии и обеспечьте его изменение внутри тела.
+
+### <span style="background-color:#008D00">5.4.2 Оператор do...while</span>
+
+<span style="color:violet">__do...while__</span> проверяет условие <span style="color:orange">_после_</span> выполнения тела, поэтому тело гарантированно выполнится хотя бы один раз.
+
+```c
+do
+    оператор
+while (выражение);
+```
+
+Чтение из stdin до конца файла или ошибки:
+
+```c
+int count; float quant; char units[21], item[21];
+do {
+    count = fscanf(stdin, "%f%20s of %20s", &quant, units, item);
+    fscanf(stdin, "%*[^\n]");
+} while (!feof(stdin) && !ferror(stdin));
+```
+
+Цикл продолжается, пока не будет достигнут конец файла или не возникнет ошибка ввода.
+
+### <span style="background-color:#008D00">5.4.3 Оператор for</span>
+
+<span style="color:violet">__for__</span> обычно применяют, когда число итераций известно заранее.
+
+```c
+for (предложение1; выражение2; выражение3)
+    оператор
+```
+
+* <span style="color:orange">_предложение1_</span> - инициализация (может быть объявлением, область видимости которого — весь цикл);
+* <span style="color:orange">_выражение2_</span> - условие продолжения (проверяется перед каждой итерацией);
+* <span style="color:orange">_выражение3_</span> - действие после тела (обычно инкремент/декремент).
+
+В `for` выражение3 выполняется после тела, хотя синтаксически расположено до него. Это может привести к ошибкам при использовании указателей:
+
+```c
+for (p = head; p != NULL; p = p->next)
+    free(p);                // p освобождён, но затем читается p->next!
+```
+
+После free(p) обращение к p->next - неопределённое поведение. Правильный подход - сохранить указатель на следующий элемент заранее:
+
+```c
+for (p = head; p != NULL; p = q) {
+    q = p->next;
+    free(p);
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> В цикле for не обращайтесь к освобождённому указателю в выражении3. Сохраняйте необходимые значения до освобождения.
+
+Примеры можешь найти в control_logic/control_logic/jokes_with_cycles_or_iteration_operators.c.
