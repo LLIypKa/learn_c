@@ -2175,3 +2175,117 @@ for (p = head; p != NULL; p = q) {
 > <span style="background-color:red; color:black">АЛАРМ!</span> В цикле for не обращайтесь к освобождённому указателю в выражении3. Сохраняйте необходимые значения до освобождения.
 
 Примеры можешь найти в control_logic/control_logic/jokes_with_cycles_or_iteration_operators.c.
+
+## <span style="background-color:#00AB00">5.5 Операторы перехода</span>
+
+Операторы перехода передают управление в другую точку функции без проверки условий. Это низкоуровневые средства, напрямую соответствующие ассемблерным инструкциям.
+
+### <span style="background-color:#008D00">5.5.1 Оператор goto</span>
+
+<span style="color:violet">__goto__</span> выполняет безусловный переход на оператор, помеченный заданной меткой. Метка — идентификатор с двоеточием, расположенный перед целевым оператором. Переход возможен только в пределах одной функции.
+
+```c
+goto метка;
+/* пропущенные операторы */
+метка:
+    /* выполняемые операторы */
+```
+
+Использование goto <span style="color:orange">_осуждается_</span>, так как беспорядочные переходы запутывают код ("спагетти-код"). Однако систематичное применение цепочек goto для освобождения ресурсов при ошибках улучшает читаемость и уменьшает дублирование кода очистки.
+
+> Пример
+
+```c
+int do_something(void) {
+    FILE *file1, *file2;
+    object_t *obj;
+    int ret_val = 0;
+
+    file1 = fopen("a_file", "w");
+    if (file1 == NULL) { ret_val = -1; goto FAIL_FILE1; }
+
+    file2 = fopen("another_file", "w");
+    if (file2 == NULL) { ret_val = -1; goto FAIL_FILE2; }
+
+    obj = malloc(sizeof(object_t));
+    if (obj == NULL) { ret_val = -1; goto FAIL_OBJ; }
+
+    // работаем с ресурсами
+
+        free(obj);
+    FAIL_OBJ:
+        fclose(file2);
+    FAIL_FILE2:
+        fclose(file1);
+    FAIL_FILE1:
+    return ret_val;
+}
+```
+
+Ресурсы освобождаются в порядке, обратном выделению (LIFO). Такой подход используют, например, в ядре Linux (функция copy_process содержит 17 меток goto для обработки сбоев).
+
+### <span style="background-color:#008D00">5.5.2 Оператор continue</span>
+
+<span style="color:violet">__continue__</span> выполняет переход в конец тела цикла, пропуская оставшуюся часть текущей итерации.
+
+```c
+while (/* … */) {
+    // …
+    continue;
+    // …
+}
+```
+
+Можно заменить меткой goto END_LOOP_BODY;. Часто применяется с условными операторами, чтобы досрочно начать следующую итерацию, когда цель текущей уже достигнута.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Код после continue в теле цикла не выполняется, следите за логикой.
+
+### <span style="background-color:#008D00">5.5.3 Оператор break</span>
+
+<span style="color:violet">__break__</span> прерывает выполнение оператора switch или цикла (while, do…while, for). Управление передаётся следующему оператору за прерванным блоком.
+
+```c
+for (;;) {
+    puts("Press any key, Q to quit: ");
+    c = toupper(getchar());
+    if (c == 'Q') break;
+} // выход только при нажатии Q
+```
+
+Пример:
+
+```c
+size_t find_element(size_t len, int arr[len], int key) {
+    size_t pos = (size_t)-1;
+    for (size_t i = 0; i < len; ++i) {
+        if (arr[i] == key) {
+            pos = i;
+            break; // ключ найден, дальнейший поиск не нужен
+        }
+    }
+    return pos;
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> break и continue пропускают оставшийся код в теле цикла/switch, что может скрыть ошибки.
+
+### <span style="background-color:#008D00">5.5.4 Оператор return</span>
+
+<span style="color:violet">__return__</span> завершает выполнение текущей функции и возвращает управление вызывающему коду. Может быть без значения (для функций типа void) или с выражением, тип которого приводится к возвращаемому типу функции.
+
+```c
+int sum(int x, int y, int z) {
+    return x + y + z;
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Если функция объявлена возвращающей значение, но поток выполнения достигает закрывающей скобки без выполнения return с выражением, результат неопределён. Пример:
+
+```c
+int absolute_value(int a) {
+    if (a < 0) {
+        return -a;
+    }
+    // ошибка: нет return для a >= 0
+}
+```
