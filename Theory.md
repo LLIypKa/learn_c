@@ -2320,7 +2320,7 @@ int absolute_value(int a) {
 
 ## <span style="background-color:#00AB00">6.2 Функции для управления памятью</span>
 
-Стандартная библиотека C предоставляет функции для выделения и освобождения динамической памяти: <span style="color:violet">__malloc__</span>, <span style="color:violet">__aligned_alloc__</span>, <span style="color:violet">__calloc__</span>, <span style="color:violet">__realloc__</span> и <span style="color:violet">__free__</span>. В OpenBSD также есть нестандартная, но полезная <span style="color:violet">__reallocarray__</span>.
+Стандартная библиотека C предоставляет функции для выделения и освобождения динамической памяти: <span style="color:violet">__malloc__</span>, <span style="color:violet">__aligned_alloc__</span>, <span style="color:violet">__calloc__</span>, <span style="color:violet">__realloc__</span> и <span style="color:violet">__free__</span>. В OpenBSD также есть нестандартная, но полезная <span style="color:violet">__reallocarray__</span>. Для первых четырех смотри примеры в dynamic_memory/jokes_with_dynamic_memory_functions.c и объяснение дальше
 
 ### <span style="background-color:#008D00">6.2.1 malloc</span>
 
@@ -2350,7 +2350,7 @@ if (str) {
     free(str);
 }
 ```
-Исправление — явно записать нуль-терминатор в последний байт:
+Исправление - явно записать нуль-терминатор в последний байт:
 ```c
 str[15] = '\0';
 ```
@@ -2358,34 +2358,33 @@ str[15] = '\0';
 ### <span style="background-color:#008D00">6.2.2 aligned_alloc</span>
 
 <span style="color:violet">__aligned_alloc__</span> (C11) выделяет память с заданным выравниванием.  
-Сигнатура: `void *aligned_alloc(size_t alignment, size_t size);`
+Сигнатура: <span style="color:orange">_void *aligned_alloc(size_t alignment, size_t size);_</span>
 
-- `alignment` должно быть степенью двойки и поддерживаться реализацией.
-- Если значение некорректно, возвращает `NULL`.
-- Используется, когда требуется более строгое выравнивание, чем предоставляет `malloc` (например, для SIMD-инструкций).
+- <span style="color:orange">_alignment_</span> должно быть степенью двойки и поддерживаться реализацией.
+- Если значение некорректно, возвращает <span style="color:orange">_NULL_</span>.
+- Используется, когда требуется более строгое выравнивание, чем предоставляет <span style="color:orange">_malloc_</span> (например, для SIMD-инструкций).
 
 ### <span style="background-color:#008D00">6.2.3 calloc</span>
 
-<span style="color:violet">__calloc__</span> выделяет память под массив из `nmemb` элементов размером `size` каждый и **заполняет её нулевыми байтами**.  
-Сигнатура: `void *calloc(size_t nmemb, size_t size);`
+<span style="color:violet">__calloc__</span> выделяет память под массив из <span style="color:orange">_nmemb_</span> элементов размером <span style="color:orange">_size_</span> каждый и <span style="color:violet">__cзаполняет её нулевыми байтами__</span>.  
+Сигнатура: <span style="color:orange">_void *calloc(size_t nmemb, size_t size);_</span> 
 
 - Подходит и для одиночного объекта (как массив из 1 элемента).
-- Внутренне перемножает `nmemb * size`; современные реализации проверяют переполнение и возвращают `NULL` при невозможности представить произведение в `size_t`.
-- Нулевые байты не гарантируют представление нуля для типов с плавающей запятой или нулевого указателя (хотя на практике обычно это 0.0 и `NULL`).
+- Внутренне перемножает <span style="color:orange">_nmemb * size_</span>; современные реализации проверяют переполнение и возвращают <span style="color:orange">_NULL_</span> при невозможности представить произведение в size_t.
+- Нулевые байты не гарантируют представление нуля для типов с плавающей запятой или нулевого указателя (хотя на практике обычно это 0.0 и NULL).
 
 ### <span style="background-color:#008D00">6.2.4 realloc</span>
 
-<span style="color:violet">__realloc__</span> изменяет размер ранее выделенного блока памяти.  
-Сигнатура: `void *realloc(void *ptr, size_t size);`
+<span style="color:violet">__realloc__</span> изменяет размер ранее выделенного блока памяти, работает как <span style="color:orange">_malloc(size)_</span> на стероидах - выделяет блок памяти указанного размера, только дополнительно копирует туда данные из старого участка, не превышая и старого, и нового размеров, при успешном выполнении очищая старый участок (вызывает free). Вызов с нулевым указателем - эквивалентен malloc.
+Сигнатура: <span style="color:orange">_void *realloc(void *ptr, size_t size);_</span> 
 
-- Если `ptr == NULL`, работает как `malloc(size)`.
-- При увеличении размера лишнее место **не инициализируется**.
-- Если новый блок не может быть выделен, возвращает `NULL`, **старый блок остаётся нетронутым**.
+- При увеличении размера лишнее место <span style="color:orange">_не инициализируется_</span> (см. [malloc](#621-malloc)).
+- Если новый блок не может быть выделен, возвращает NULL, <span style="color:orange">_старый блок остаётся нетронутым_</span>.
 - При успехе старый указатель становится недействительным; все указатели, ссылавшиеся на него, должны быть обновлены.
 
-> <span style="background-color:red; color:black">АЛАРМ!</span> Никогда не делайте `p = realloc(p, newsize);` — при неудаче вы теряете исходный указатель, что приводит к утечке памяти.
+> <span style="background-color:red; color:black">АЛАРМ!</span> Никогда не делайте <span style="color:orange">_p = realloc(p, newsize);_</span> - при неудаче вы теряете исходный указатель, что приводит к утечке памяти.
 
-Правильный подход с временной переменной (листинг 6.3):
+Правильный подход с временной переменной:
 ```c
 void *p2;
 void *p = malloc(100);
@@ -2396,9 +2395,5 @@ if ((nsize == 0) || (p2 = realloc(p, nsize)) == NULL) {
 }
 p = p2;
 ```
-- Дополнительно проверяется, что `nsize != 0` (передача `0` в `realloc` — неопределённое поведение, официально запрещено в C2x).
-- После `realloc` нельзя полагаться на то, что адрес остался прежним; используйте косвенный доступ (дескрипторы), чтобы автоматически обновлять все ссылки.
-
-### <span style="background-color:#008D00">free (кратко)</span>
-
-Освобождение выделенной памяти выполняется функцией <span style="color:violet">__free__</span>, которая будет рассмотрена далее.
+- Дополнительно проверяется, что nsize != 0 (передача 0 в realloc - неопределённое поведение, <span style="color:orange">_официально запрещено_</span> в C2x).
+- После realloc нельзя полагаться на то, что адрес остался прежним; используйте косвенный доступ (дескрипторы), чтобы автоматически обновлять все ссылки.
