@@ -2398,7 +2398,7 @@ p = p2;
 - Дополнительно проверяется, что nsize != 0 (передача 0 в realloc - неопределённое поведение, <span style="color:orange">_официально запрещено_</span> в C2x).
 - После realloc нельзя полагаться на то, что адрес остался прежним; используйте косвенный доступ (дескрипторы), чтобы автоматически обновлять все ссылки.
 
-## <span style="background-color:#008D00">6.2.5 reallocarray</span>
+### <span style="background-color:#008D00">6.2.5 reallocarray</span>
 
 <span style="color:violet">__reallocarray__</span> - функция, появившаяся в OpenBSD и доступная теперь во многих системах (включая GNU C Library). Она изменяет размер блока памяти подобно <span style="color:orange">_realloc_</span>, но <span style="color:orange">_безопасно_</span> вычисляет общий размер массива, проверяя целочисленное переполнение при умножении nmemb * size.
 
@@ -2416,7 +2416,7 @@ if ((newp = reallocarray(p, num, size)) == NULL) {
 }
 ```
 
-## <span style="background-color:#008D00">6.2.6 free</span>
+### <span style="background-color:#008D00">6.2.6 free</span>
 
 <span style="color:violet">__free__</span> освобождает память, ранее выделенную функциями malloc, aligned_alloc, calloc, realloc (или reallocarray). Переданный указатель должен быть именно тем, что вернула функция выделения. После освобождения память может быть повторно использована.
 
@@ -2598,3 +2598,88 @@ int matrix_sum(size_t rows, size_t cols, int m[rows][cols]) {
 ```
 
 > <span style="background-color:red; color:black">АЛАРМ!</span> Функция не выделяет память для матрицы - вызывающий должен сам предоставить массив, размеры которого точно соответствуют переданным rows и cols. Несовпадение приводит к неопределённому поведению.
+
+## <span style="background-color:#00AB00">6.6 Отладка проблем, связанных с выделением памяти</span>
+
+Ненадлежащее управление памятью приводит к утечкам, использованию после освобождения, двойному освобождению и т.п. Для борьбы с ними применяют три стратегии:
+
+1. <span style="color:violet">__Обнуление указателей после free__</span> (см. [free](#626-free)).
+2. <span style="color:violet">__Упрощение стратегии управления памятью__</span> - выделение и освобождение памяти в одном модуле, на одном уровне абстракции.
+3. <span style="color:violet">__Средства динамического анализа__</span> - инструменты, автоматически обнаруживающие ошибки работы с памятью (подробнее в главе 11).
+
+### <span style="background-color:#008D00">6.6.1 Библиотека dmalloc</span>
+
+<span style="color:violet">__dmalloc__</span> (debug memory allocation) - библиотека Грея Уотсона, заменяющая стандартные функции управления памятью (malloc, realloc, calloc, free) отладочными версиями с настраиваемыми проверками.
+
+<span style="color:orange">_Использование_</span>:
+
+1. Установить и настроить dmalloc (см. https://dmalloc.com/).
+2. Запустить утилиту командной строки для включения проверок:
+   ```bash
+   dmalloc -l logfile -i 100 low
+   ```
+   - <span style="color:orange">_-l logfile_</span> - файл журнала,
+   - <span style="color:orange">_-i 100_</span> - проверка кучи каждые 100 вызовов,
+   - <span style="color:orange">_low_</span> - минимальный уровень отладки (можно также <span style="color:orange">_runtime_</span>, <span style="color:orange">_medium_</span>, <span style="color:orange">_high_</span>).
+3. Скомпилировать программу с поддержкой dmalloc:
+   ```bash
+   gcc -DDMALLOC caesar.c -o caesar -ldmalloc
+   ```
+
+Пример использования:
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#ifdef DMALLOC
+#include "dmalloc.h"
+#endif
+
+void usage(char *msg) {
+    fprintf(stderr, "%s", msg);
+    free(msg);   // первое освобождение
+    return;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 3 && argc != 4) {
+        char *errmsg = (char *)malloc(80);
+        sprintf(errmsg, "Sorry %s,\nUsage: caesar secret_file keys_file [output_file]\n",
+                getenv("USER"));
+        usage(errmsg);
+        free(errmsg);   // второе освобождение — двойное освобождение!
+        exit(EXIT_FAILURE);
+    }
+    // ---snip---
+    exit(EXIT_SUCCESS);
+}
+```
+
+При запуске программа аварийно завершается, а dmalloc выводит сообщение:
+
+```
+debug-malloc library: dumping program, fatal error
+  Error: tried to free previously freed pointer (err 61)
+```
+
+В журнале фиксируется точное место ошибки:
+
+```
+ERROR: free: tried to free previously freed pointer (err 61)
+```
+
+В примере указатель errmsg освобождается сначала в usage, а затем в main - это <span style="color:orange">_уязвимость двойного освобождения_</span>. dmalloc позволяет быстро локализовать подобные дефекты.
+
+### <span style="background-color:#008D00">6.6.2 Системы с повышенными требованиями к безопасности</span>
+
+В таких системах динамическое выделение памяти часто <span style="color:orange">_полностью запрещено_</span> из-за непредсказуемости менеджеров памяти и их влияния на производительность. Вместо этого вся память выделяется статически на этапе компиляции. При отказе от рекурсии, alloca и VLA максимальный размер стека можно вычислить статически, что гарантирует отсутствие переполнения стека при любых входных данных.
+
+GCC предоставляет флаги для контроля VLA:
+- <span style="color:orange">_-Wvla_</span> - предупреждает о любом использовании VLA,
+- <span style="color:orange">_-Wvla-larger-than=byte-size_</span> - предупреждает, если размер VLA не ограничен или может превысить byte-size байт.
+
+Эти флаги помогают гарантировать отсутствие VLA в критическом коде.
+
+> Выполнить упражнение 2 (про dmalloc) после изучения 11 главы
