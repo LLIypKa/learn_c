@@ -2496,3 +2496,105 @@ for (size_t i = 0; i < p->num; ++i)
 - <span style="color:violet">__DCL38-C__</span> - используйте синтаксис C99 (пустые скобки []), а не устаревшие расширения вроде [1] или [0].
 
 Такой подход позволяет элегантно работать с объектами переменной длины без лишних указателей и отдельных выделений памяти.
+
+## <span style="background-color:#00AB00">6.5 Другие виды динамически выделяемой памяти</span>
+
+Помимо кучи, динамическая память может выделяться в <span style="color:violet">__стеке__</span> (структура данных LIFO, поддерживающая вложенные вызовы функций). Локальные переменные с автоматическим сроком хранения размещаются в стековых фреймах. Существуют два основных механизма: функция <span style="color:orange">_alloca_</span> (нестандартная) и массивы переменной длины (VLA, стандарт C99).
+
+### <span style="background-color:#008D00">6.5.1 Функция alloca</span>
+
+<span style="color:violet">__alloca__</span> - встроенная функция компилятора, выделяющая память в стеке вызывающей функции. Память автоматически освобождается при выходе из функции. Не является частью стандарта C или POSIX.
+
+```c
+void printerr(errno_t errnum) {
+    rsize_t size = strerrorlen_s(errnum) + 1;
+    char *msg = (char *)alloca(size);
+    if (strerror_s(msg, size, errnum) != 0) {
+        fputs(msg, stderr);
+    } else {
+        fputs("unknown error", stderr);
+    }
+}
+```
+
+Проблемы и ограничения:
+- <span style="color:orange">_Нельзя вызывать_</span> free для памяти, полученной от alloca - это серьёзная ошибка.
+- Компиляторы обычно <span style="color:orange">_не встраивают_</span> функции, содержащие alloca.
+- GCC предоставляет флаги для диагностики: <span style="color:orange">_-Walloca_</span> (предупреждает о вызовах alloca) и <span style="color:orange">_-Walloca-larger-than=size_</span> (предупреждает, если запрошенный размер превышает size).
+
+><span style="background-color:red; color:black">АЛАРМ!</span> При выходе за границы стека alloca <span style="color:orange">_не возвращает NULL_</span>, что делает ошибку необнаружимой. Не выделяйте с её помощью большие или неограниченные блоки.
+
+> Использование `alloca` не рекомендуется.
+
+### <span style="background-color:#008D00">6.5.2 Массивы переменной длины (VLA)</span>
+
+<span style="color:violet">__Массивы переменной длины (VLA)__</span> появились в C99. Размер такого массива определяется во время выполнения, но после создания не может быть изменён. VLA можно объявлять только на уровне блока или в прототипе функции.
+
+> Примеры в dynamic_memory/jokes_with_variable_length_array.c
+
+#### <span style="background-color:#006D00">6.5.2.1 Объявление на уровне блока</span>
+
+```c
+void func(size_t size) {
+    int vla[size];
+    // ...
+}
+```
+
+Память <span style="color:orange">_выделяется в стеке_</span> и <span style="color:orange">_освобождается при выходе из блока_</span>.  
+Пример переписанной функции print_error alloca:
+
+```c
+void print_error(int errnum) {
+    size_t size = strerrorlen_s(errnum) + 1;
+    char msg[size];   // VLA вместо alloca
+    if (strerror_s(msg, size, errnum) != 0) {
+        fputs(msg, stderr);
+    } else {
+        fputs("unknown error", stderr);
+    }
+}
+```
+
+Особенности и риски:
+- Возможно целочисленное переполнение при вычислении размера (размер_элемента * количество). Используйте <span style="color:orange">_беззнаковый тип_</span> (size_t) и проверяйте допустимость размера (правило <span style="color:orange">_ARR32-C_</span> CERT C).
+- Можно указывать отрицательный размер (синтаксически, но это приведёт к <span style="color:orange">_неопределенному поведению_</span>).
+- В рекурсивных функциях каждый вызов создаёт новый экземпляр VLA, что повышает нагрузку на стек.
+- GCC предлагает флаг <span style="color:orange">_-Wvla-larger-than=size_</span> для диагностики слишком больших VLA.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Как и alloca, VLA может выйти за пределы стека. Переносимого способа узнать оставшееся место нет, поэтому проверяйте размер перед объявлением.
+
+#### <span style="background-color:#006D00">6.5.2.2 Побочные эффекты sizeof для VLA</span>
+
+Если операнд <span style="color:violet">__sizeof__</span> - VLA или выражение, изменяющее его размер, то вычисление происходит во время выполнения, а не на этапе компиляции (то же самое касается и ). Это может привести к неожиданным побочным эффектам (не какие-нибудь неожиданности, как ты подумал, а просто ненужное присвоение):
+
+```c
+size_t size = 12;
+printf("%zu\n", size);        // 12
+(void)sizeof(int[size++]);    // size становится 13
+printf("%zu\n", size);        // 13
+typedef int foo[size++];      // size становится 14
+printf("%zu\n", size);        // 14
+```
+
+#### <span style="background-color:#006D00">6.5.2.3 Объявление на уровне прототипа функции</span>
+
+VLA можно использовать в параметрах функции, при этом размер массива должен быть объявлен раньше самого массива. Фактически массив всё равно передаётся как указатель.
+
+```c
+void *memset_vla(size_t n, char s[n], int c);
+```
+
+Преимущество: возможность обрабатывать двумерные массивы с переменными размерами.
+
+```c
+int matrix_sum(size_t rows, size_t cols, int m[rows][cols]) {
+    int total = 0;
+    for (size_t r = 0; r < rows; r++)
+        for (size_t c = 0; c < cols; c++)
+            total += m[r][c];
+    return total;
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Функция не выделяет память для матрицы - вызывающий должен сам предоставить массив, размеры которого точно соответствуют переданным rows и cols. Несовпадение приводит к неопределённому поведению.
