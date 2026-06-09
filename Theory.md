@@ -3033,3 +3033,125 @@ __STDC_UTF_32__
 ```
 
 Обе записи обозначают символ с кодом 0x08 (backspace).
+
+## <span style="background-color:#00AB00">7.5 Кодировки в Linux и Windows</span>
+
+### <span style="background-color:#008D00">7.5.1 Linux</span>
+
+В Linux до распространения <span style="color:violet">__UTF-8__</span> использовались разные расширения ASCII в зависимости от языка и региона:
+
+* <span style="color:violet">__ISO 8859-1__</span>, <span style="color:violet">__ISO 8859-2__</span> - Европа;
+* <span style="color:violet">__ISO 8859-7__</span> - Греция;
+* <span style="color:violet">__KOI-8__</span>, <span style="color:violet">__ISO 8859-5__</span>, <span style="color:violet">__CP1251__</span> - Россия;
+* <span style="color:violet">__EUC__</span>, <span style="color:violet">__Shift-JIS__</span> - Япония;
+* <span style="color:violet">__BIG5__</span> - Тайвань.
+
+Сегодня эти старые кодировки постепенно вытесняются, и локализованные строки стараются хранить в <span style="color:orange">_UTF-8_</span>.
+
+#### <span style="background-color:#007300">7.5.1.1 Флаги GCC</span>
+
+<span style="color:violet">__GCC__</span> поддерживает несколько флагов для выбора кодировок:
+
+```c
+-fexec-charset=кодировка
+```
+
+* задаёт <span style="color:violet">__исполняемую кодировку__</span> для строк и символьных констант;
+* по умолчанию используется <span style="color:orange">_UTF-8_</span>;
+* можно указать кодировку, поддерживаемую <span style="color:violet">__iconv__</span>.
+
+Пример:
+
+```c
+-fexec-charset=IBM1047
+```
+
+заставляет GCC интерпретировать строковые константы как кодировку <span style="color:orange">_EBCDIC 1047_</span>.
+
+```c
+-fwide-exec-charset=кодировка
+```
+
+* задаёт кодировку для <span style="color:violet">__широких строк__</span> и <span style="color:violet">__широких символьных констант__</span>;
+* по умолчанию используется <span style="color:orange">_UTF-32_</span> или <span style="color:orange">_UTF-16_</span> - в зависимости от ширины wchar_t.
+
+```c
+-finput-charset=кодировка
+```
+
+* задаёт <span style="color:violet">__кодировку входного файла__</span>, то есть перевод содержимого исходника в исходную кодировку, используемую GCC.
+
+У <span style="color:violet">__Clang__</span> есть поддержка -fexec-charset и -finput-charset, но нет -fwide-exec-charset; при этом допускается только <span style="color:orange">_UTF-8_</span>.
+
+---
+
+### <span style="background-color:#008D00">7.5.2 Windows</span>
+
+В Windows поддержка кодировок исторически развивалась беспорядочно. Для современных программ предпочтительнее использовать <span style="color:violet">__Unicode-интерфейсы__</span>, потому что это даёт более предсказуемую обработку текста.
+
+Обычно код на Unicode-интерфейсах также работает быстрее, потому что узкие строки, передаваемые библиотечным функциям Windows, часто всё равно преобразуются в Unicode.
+
+#### <span style="background-color:#007300">7.5.2.1 Точки входа main и wmain</span>
+
+Visual C++ поддерживает две точки входа:
+
+* <span style="color:violet">__main__</span> - узкосимвольные аргументы;
+* <span style="color:violet">__wmain__</span> - широкосимвольные аргументы.
+
+Формы объявления:
+
+| Узкосимвольные аргументы | Широкосимвольные аргументы |
+| ---------------------------------|---------------------------------------|
+| int main(void); | int wmain(void); |
+| int main(int argc, char *argv[]); | int wmain(int argc, wchar_t *argv[]); |
+| int main(int argc, char *argv[], char *envp[]); | int wmain(int argc, wchar_t *argv[], wchar_t *envp[]); |
+
+Если программа запускается из командной оболочки:
+
+* сама Windows работает с командной строкой в <span style="color:orange">_UTF-16_</span>;
+* для main загрузочный код вызывает <span style="color:violet">__CommandLineToArgvW__</span>, а затем переводит аргументы в текущую <span style="color:violet">__кодовую страницу Windows__</span>;
+* для wmain аргументы передаются напрямую в UTF-16.
+
+Если символ нельзя представить в текущей кодовой странице Windows, он заменяется на <span style="color:orange">_?_<span>.
+
+#### <span style="background-color:#007300">7.5.2.2 Консольный вывод</span>
+
+При выводе в консоль Windows использует <span style="color:violet">__OEM-кодовую страницу__</span>, а не обычную кодовую страницу Windows.
+
+Это значит, что:
+
+* текст для stdout и stderr часто нужно предварительно преобразовать в OEM-кодировку;
+* либо нужно изменить кодовую страницу консоли, чтобы она совпадала с кодировкой текста;
+* иначе вывод может оказаться непредсказуемым.
+
+Даже при совпадении кодировок <span style="color:orange">_возможны проблемы_</span> с отображением, если шрифт консоли не содержит нужных глифов.
+
+Кроме того, по историческим причинам консоль Windows <span style="color:orange">_не отображает_</span> символы вне Unicode BMP, поскольку в каждой ячейке используется только 16-битное значение.
+
+#### <span style="background-color:#007300">7.5.2.3 Узкие и широкие версии API</span>
+
+У каждого системного вызова Win32 SDK есть две версии:
+
+* узкая, с суффиксом <span style="color:violet">__A__</span>;
+* широкая, с суффиксом <span style="color:violet">__W__</span>.
+
+Пример:
+
+```c
+int SomeFuncA(LPSTR SomeString);
+int SomeFuncW(LPWSTR SomeString);
+```
+
+Рекомендуется сразу выбирать нужную версию и передавать ей строку соответствующего типа:
+
+```c
+SomeFuncW(L"String");
+SomeFuncA("String");
+```
+
+Примеры реальных пар API:
+
+* MessageBoxA / MessageBoxW;
+* CreateWindowExA / CreateWindowExW.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Для Windows-кода важно заранее выбрать: либо <span style="color:orange">_узкие строки_</span>, либо <span style="color:orange">_широкие строки_</span>. Смешивание подходов почти всегда ведёт к лишним преобразованиям и ошибкам с кодировкой.
