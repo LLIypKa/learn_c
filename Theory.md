@@ -3681,3 +3681,101 @@ if (temp != NULL) {
 - <span style="color:violet">__Двоичный (бинарный) поток__</span> - последовательность произвольных байтов. Данные, прочитанные из такого потока, точно соответствуют записанным (внутри одной реализации). Более предсказуем, чем текстовый, но неудобен для обмена текстовой информацией с другими программами.
 
 Для работы с обычными текстовыми файлами, совместимыми с другими текстовыми редакторами, проще использовать текстовые потоки.
+
+## <span style="background-color:#00AB00">8.2 Открытие и создание файлов</span>
+
+### <span style="background-color:#008D00">8.2.1 Функция fopen</span>
+
+<span style="color:violet">__fopen__</span> открывает файл с именем filename и связывает его с потоком FILE*. Если файл не существует, он может быть создан в зависимости от режима.  
+Сигнатура: <span style="color:orange">_FILE *fopen(const char * restrict filename, const char * restrict mode);_</span>
+
+Таблица режимов <span style="color:orange">_mode_</span> (основные):
+
+| Режим | Описание |
+|-------|----------|
+| <span style="color:orange">_"r"_</span> | Открыть существующий текстовый файл для чтения |
+| <span style="color:orange">_"w"_</span> | Усечь до нуля или создать текстовый файл для записи |
+| <span style="color:orange">_"a"_</span> | Открыть или создать текстовый файл для записи в конец |
+| <span style="color:orange">_"rb"_</span>, <span style="color:orange">_"wb"_</span>, <span style="color:orange">_"ab"_</span> | Аналогично для двоичного файла |
+| <span style="color:orange">_"r+"_</span> | Открыть существующий текстовый файл для чтения и записи |
+| <span style="color:orange">_"w+"_</span> | Усечь до нуля или создать текстовый файл для чтения и записи |
+| <span style="color:orange">_"a+"_</span> | Открыть или создать текстовый файл для чтения и записи в конец |
+| <span style="color:orange">_"r+b"_</span>/<span style="color:orange">_"rb+"_</span> и др. | Аналогично для двоичного файла |
+
+- Символ b означает <span style="color:orange">_двоичный режим_</span>. В ряде реализаций может установить текущую позицию в потоке <span style="color:orange">_за пределы_</span> последнего записанного фрагмента данных - это объясняется заполнением потока нуль-символами
+- Символ + <span style="color:orange">_добавляет возможность записи (или чтения)_</span> к существующему режиму. В ряде реализаций может привести открытие текстового потока к открытию двоичного.
+- При открытии с r файл <span style="color:orange">_должен существовать_</span>, иначе ошибка.
+- При a (append) запись <span style="color:orange">_всегда_</span> происходит в конец файла.
+
+Эксклюзивный режим (C11) - добавляется x в конец строки режима:
+
+| Режим | Описание |
+|-------|----------|
+| <span style="color:orange">_"wx"_</span> | Создать эксклюзивный текстовый файл для записи |
+| <span style="color:orange">_"wbx"_</span> | Создать эксклюзивный двоичный файл для записи |
+| <span style="color:orange">_"w+x"_</span> | Создать эксклюзивный текстовый файл для чтения и записи |
+| <span style="color:orange">_"w+bx"_</span>/<span style="color:orange">_"wb+x"_</span> | Создать эксклюзивный двоичный файл для чтения и записи |
+
+Если файл уже существует, открытие в эксклюзивном режиме завершается неудачей.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Объект FILE <span style="color:orange">_нельзя копировать_</span>. Попытка использовать копию (например, FILE my_stdout = *stdout;) приводит к неопределённому поведению и, как правило, к аварийному завершению.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(void) {
+  FILE my_stdout = *stdout;
+  if (fputs("Hello, World!\n", &my_stdout) == EOF) {
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+```
+
+### <span style="background-color:#008D00">8.2.2 Функция open (POSIX)</span>
+
+В POSIX-системах функция <span style="color:violet">__open__</span> устанавливает соединение между файлом и <span style="color:violet">__файловым дескриптором__</span> - неотрицательным целым числом, уникальным в рамках процесса (по, сути - идентификатор файла рамках процеса).
+
+Сигнатура: <span style="color:orange">_int open(const char *path, int oflag, ...);_</span>
+
+- Возвращает <span style="color:orange">_наименьший_</span> доступный дескриптор, либо -1 при ошибке (устанавливается errno).
+- После открытия смещение в файле устанавливается в начало.
+
+Параметр oflag формируется побитовым ИЛИ (|) из <span style="color:orange">_ровно одного_</span> режима доступа и любых флагов состояния.
+
+Режимы доступа (один из них обязателен):
+- <span style="color:violet">__O_RDONLY__</span> - только чтение
+- <span style="color:violet">__O_WRONLY__</span> - только запись
+- <span style="color:violet">__O_RDWR__</span> - чтение и запись
+- <span style="color:violet">__O_EXEC__</span> - только выполнение
+- <span style="color:violet">__O_SEARCH__</span> - поиск в каталоге
+
+Флаги состояния (наиболее употребительные):
+- <span style="color:violet">__O_APPEND__</span> - перед каждой записью смещается в конец файла
+- <span style="color:violet">__O_TRUNC__</span> - усечь файл до нулевой длины
+- <span style="color:violet">__O_CREAT__</span> - создать файл, если он не существует
+- <span style="color:violet">__O_EXCL__</span> - вместе с O_CREAT: если файл существует, вернуть ошибку
+
+Права доступа при создании (mode_t): 
+Если установлен O_CREAT, третьим аргументом передают битовое ИЛИ флагов прав (например, из <sys/stat.h>):
+- <span style="color:violet">__S_IRUSR__</span>, <span style="color:violet">__S_IWUSR__</span> - чтение/запись для владельца
+- <span style="color:violet">__S_IRGRP__</span> - чтение для группы
+- <span style="color:violet">__S_IROTH__</span> - чтение для остальных
+
+```c
+mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+const char *pathname = "/tmp/file";
+int fd;
+if ((fd = open(pathname, O_WRONLY | O_CREAT | O_TRUNC, mode)) == -1) {
+    fprintf(stderr, "Can't open %s.\n", pathname);
+    exit(1);
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Всегда проверяйте возврат open: -1 означает ошибку, детали в errno.
+
+Связь с потоками FILE*:
+- <span style="color:violet">__fileno__</span> - получить файловый дескриптор из FILE*
+- <span style="color:violet">__fdopen__</span> - создать FILE* из файлового дескриптора
+
+POSIX-интерфейсы на основе дескрипторов дают доступ к каталогам, правам, символическим и жёстким ссылкам - возможностям, которые обычно недоступны через стандартные потоки C.
