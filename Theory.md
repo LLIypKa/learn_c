@@ -85,7 +85,7 @@ int main() {
 </span>
 
 ### <span style="background-color:red; color:black">__Спецификаторы формата__</span> (не все)
-1. <span style="color:violet">__%s__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_строку_</span>
+1. <span style="color:violet">__%s__</span> или <span style="color:violet">__%[]__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_строку_</span>
 2. <span style="color:violet">__%d__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_целое число_</span>
 3. <span style="color:violet">__%f__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_число с плавающей точкой_</span>
 4. <span style="color:violet">__%c__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_символ_</span>
@@ -3624,3 +3624,459 @@ if (temp != NULL) {
     - Нет abort_handler_s, ignore_handler_s, memset_s, макроса RSIZE_MAX.
     - Пересекающиеся буферы не считаются нарушением (ведёт к UB).
 - Предупреждает об использовании небезопасных функций (можно отключить, определив _CRT_SECURE_NO_WARNINGS).
+
+# <span style="background-color:#00CF00">8 Ввод/вывод</span>
+
+## <span style="background-color:#00AB00">8.1 Стандартные потоки ввода/вывода</span>
+
+<span style="color:violet">__Поток (stream)__</span> - унифицированная абстракция для работы с файлами и устройствами, производящими или потребляющими последовательные данные (файлы, сокеты, клавиатура, USB и т.п.).  
+Представляется непрозрачным типом <span style="color:violet">__FILE*__</span> (указатель на FILE). Сам объект FILE хранит позицию в файле, состояние буфера, индикаторы ошибки и конца файла.  
+> <span style="background-color:red; color:black">АЛАРМ!</span> <span style="color:orange">_Никогда не выделяйте_</span> объект FILE самостоятельно - все операции выполняются через FILE*.  
+Основной заголовочный файл - <span style="color:orange">_<stdio.h>_</span>.
+
+> Стандартный C предоставляет лишь базовые абстракции (нет понятия каталога, прав доступа и т.п.). Для реальных приложений часто требуются платформенно‑зависимые API (POSIX, Windows, собственные оболочки).
+
+### <span style="background-color:#008D00">8.1.1 Буферизация потоков</span>
+
+<span style="color:violet">__Буферизация__</span> - временное хранение данных в памяти для уменьшения количества медленных операций ввода/вывода. Когда накоплено достаточно данных для заполнения блока, они записываются на устройство за одну операцию - это называется <span style="color:violet">__сброс буфера__</span>.
+
+Поток может находиться в одном из трёх состояний:
+
+- <span style="color:violet">__Небуферизованный__</span> - данные передаются <span style="color:orange">_как можно скорее_</span>. Используется для экстренных сообщений (логи, ошибки).
+- <span style="color:violet">__Полностью буферизованный__</span> - данные передаются <span style="color:orange">_блоками_</span> при заполнении буфера. Типично для файлового ввода/вывода.
+- <span style="color:violet">__Строчно‑буферизованный__</span> - данные передаются при <span style="color:orange">_появлении символа перевода строки_</span>. Обычно применяется для интерактивных устройств (терминал).
+
+### <span style="background-color:#008D00">8.1.2 Стандартные потоки</span>
+
+При запуске программы автоматически открываются три предопределённых текстовых потока (объявлены в <span style="color:orange">_<stdio.h>):
+
+- <span style="color:violet">__stdin__</span> - стандартный ввод, основной источник входных данных (по умолчанию клавиатура).
+- <span style="color:violet">__stdout__</span> - стандартный вывод, основной поток вывода программы (по умолчанию терминал).
+- <span style="color:violet">__stderr__</span> - стандартный вывод ошибок, предназначен для диагностических сообщений (обычно терминал).
+
+Особенности буферизации:
+- <span style="color:orange">_stdin_</span> и <span style="color:orange">_stdout_</span> полностью буферизуются, только <span style="color:orange">_если не подключены к интерактивному устройству_</span> (например, при перенаправлении в файл).
+- stderr <span style="color:orange">_при открытии не является полностью буферизованным_</span>, поэтому сообщения об ошибках выводятся немедленно, что позволяет увидеть ошибки даже тогда, <span style="color:orange">_когда обычный вывод ещё находится в буфере_</span>.
+
+Обычно для каждого файла поток использует входной и выходной буферы.
+
+Потоки можно перенаправлять и объединять в цепочки с помощью <span style="color:orange">_каналов POSIX (pipe)_</span>.  
+Пример: echo "Hello Robert" | sed "s/Hello/Hi/" | sed "s/Robert/robot/" – вывод одной программы подаётся на вход другой.
+
+
+
+### <span style="background-color:#008D00">8.1.3 Ориентация потоков</span>
+
+Каждый поток имеет <span style="color:violet">__ориентацию__</span>: байтовую (узкие символы, char) или широкую (wchar_t).  
+- Сразу после открытия поток <span style="color:orange">_не имеет_</span> ориентации.
+- Первая выполненная операция ввода/вывода определяет ориентацию: байтовая функция задаёт <span style="color:orange">_байтовую ориентацию_</span>, широкая – <span style="color:orange">_широкую_</span>.
+
+<span style="background-color:red; color:black">АЛАРМ!</span> Применение байтовых функций к широкоориентированному потоку (и наоборот) приводит к <span style="color:orange">_неопределённому поведению_</span>. Никогда не смешивайте узкие, широкие символы и двоичные данные в одном файле.
+
+Сбросить ориентацию можно с помощью функции fwide или закрыв и заново открыв файл. При старте программы все три стандартных потока неориентированы.
+
+### <span style="background-color:#008D00">8.1.4 Текстовые и двоичные потоки</span>
+
+- <span style="color:violet">__Текстовый поток__</span> - последовательность символов, организованная в строки, завершающиеся символом перевода строки. В Unix‑системах это <span style="color:orange">_\n_</span>, в Windows обычно <span style="color:orange">_\r\n_</span>. При переносе файлов между ОС могут возникнуть проблемы с отображением конца строки.
+- <span style="color:violet">__Двоичный (бинарный) поток__</span> - последовательность произвольных байтов. Данные, прочитанные из такого потока, точно соответствуют записанным (внутри одной реализации). Более предсказуем, чем текстовый, но неудобен для обмена текстовой информацией с другими программами.
+
+Для работы с обычными текстовыми файлами, совместимыми с другими текстовыми редакторами, проще использовать текстовые потоки.
+
+## <span style="background-color:#00AB00">8.2 Открытие и создание файлов</span>
+
+### <span style="background-color:#008D00">8.2.1 Функция fopen</span>
+
+<span style="color:violet">__fopen__</span> открывает файл с именем filename и связывает его с потоком FILE*. Если файл не существует, он может быть создан в зависимости от режима.  
+Сигнатура: <span style="color:orange">_FILE *fopen(const char * restrict filename, const char * restrict mode);_</span>
+
+Таблица режимов <span style="color:orange">_mode_</span> (основные):
+
+| Режим | Описание |
+|-------|----------|
+| <span style="color:orange">_"r"_</span> | Открыть существующий текстовый файл для чтения |
+| <span style="color:orange">_"w"_</span> | Усечь до нуля или создать текстовый файл для записи |
+| <span style="color:orange">_"a"_</span> | Открыть или создать текстовый файл для записи в конец |
+| <span style="color:orange">_"rb"_</span>, <span style="color:orange">_"wb"_</span>, <span style="color:orange">_"ab"_</span> | Аналогично для двоичного файла |
+| <span style="color:orange">_"r+"_</span> | Открыть существующий текстовый файл для чтения и записи |
+| <span style="color:orange">_"w+"_</span> | Усечь до нуля или создать текстовый файл для чтения и записи |
+| <span style="color:orange">_"a+"_</span> | Открыть или создать текстовый файл для чтения и записи в конец |
+| <span style="color:orange">_"r+b"_</span>/<span style="color:orange">_"rb+"_</span> и др. | Аналогично для двоичного файла |
+
+- Символ b означает <span style="color:orange">_двоичный режим_</span>. В ряде реализаций может установить текущую позицию в потоке <span style="color:orange">_за пределы_</span> последнего записанного фрагмента данных - это объясняется заполнением потока нуль-символами
+- Символ + <span style="color:orange">_добавляет возможность записи (или чтения)_</span> к существующему режиму. В ряде реализаций может привести открытие текстового потока к открытию двоичного.
+- При открытии с r файл <span style="color:orange">_должен существовать_</span>, иначе ошибка.
+- При a (append) запись <span style="color:orange">_всегда_</span> происходит в конец файла.
+
+Эксклюзивный режим (C11) - добавляется x в конец строки режима:
+
+| Режим | Описание |
+|-------|----------|
+| <span style="color:orange">_"wx"_</span> | Создать эксклюзивный текстовый файл для записи |
+| <span style="color:orange">_"wbx"_</span> | Создать эксклюзивный двоичный файл для записи |
+| <span style="color:orange">_"w+x"_</span> | Создать эксклюзивный текстовый файл для чтения и записи |
+| <span style="color:orange">_"w+bx"_</span>/<span style="color:orange">_"wb+x"_</span> | Создать эксклюзивный двоичный файл для чтения и записи |
+
+Если файл уже существует, открытие в эксклюзивном режиме завершается неудачей.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Объект FILE <span style="color:orange">_нельзя копировать_</span>. Попытка использовать копию (например, FILE my_stdout = *stdout;) приводит к неопределённому поведению и, как правило, к аварийному завершению.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(void) {
+  FILE my_stdout = *stdout;
+  if (fputs("Hello, World!\n", &my_stdout) == EOF) {
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+```
+
+### <span style="background-color:#008D00">8.2.2 Функция open (POSIX)</span>
+
+В POSIX-системах функция <span style="color:violet">__open__</span> устанавливает соединение между файлом и <span style="color:violet">__файловым дескриптором__</span> - неотрицательным целым числом, уникальным в рамках процесса (по, сути - идентификатор файла рамках процеса).
+
+Сигнатура: <span style="color:orange">_int open(const char *path, int oflag, ...);_</span>
+
+- Возвращает <span style="color:orange">_наименьший_</span> доступный дескриптор, либо -1 при ошибке (устанавливается errno).
+- После открытия смещение в файле устанавливается в начало.
+
+Параметр oflag формируется побитовым ИЛИ (|) из <span style="color:orange">_ровно одного_</span> режима доступа и любых флагов состояния.
+
+Режимы доступа (один из них обязателен):
+- <span style="color:violet">__O_RDONLY__</span> - только чтение
+- <span style="color:violet">__O_WRONLY__</span> - только запись
+- <span style="color:violet">__O_RDWR__</span> - чтение и запись
+- <span style="color:violet">__O_EXEC__</span> - только выполнение
+- <span style="color:violet">__O_SEARCH__</span> - поиск в каталоге
+
+Флаги состояния (наиболее употребительные):
+- <span style="color:violet">__O_APPEND__</span> - перед каждой записью смещается в конец файла
+- <span style="color:violet">__O_TRUNC__</span> - усечь файл до нулевой длины
+- <span style="color:violet">__O_CREAT__</span> - создать файл, если он не существует
+- <span style="color:violet">__O_EXCL__</span> - вместе с O_CREAT: если файл существует, вернуть ошибку
+
+Права доступа при создании (mode_t): 
+Если установлен O_CREAT, третьим аргументом передают битовое ИЛИ флагов прав (например, из <sys/stat.h>):
+- <span style="color:violet">__S_IRUSR__</span>, <span style="color:violet">__S_IWUSR__</span> - чтение/запись для владельца
+- <span style="color:violet">__S_IRGRP__</span> - чтение для группы
+- <span style="color:violet">__S_IROTH__</span> - чтение для остальных
+
+```c
+mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+const char *pathname = "/tmp/file";
+int fd;
+if ((fd = open(pathname, O_WRONLY | O_CREAT | O_TRUNC, mode)) == -1) {
+    fprintf(stderr, "Can't open %s.\n", pathname);
+    exit(1);
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Всегда проверяйте возврат open: -1 означает ошибку, детали в errno.
+
+Связь с потоками FILE*:
+- <span style="color:violet">__fileno__</span> - получить файловый дескриптор из FILE*
+- <span style="color:violet">__fdopen__</span> - создать FILE* из файлового дескриптора
+
+POSIX-интерфейсы на основе дескрипторов дают доступ к каталогам, правам, символическим и жёстким ссылкам - возможностям, которые обычно недоступны через стандартные потоки C.
+
+## <span style="background-color:#00AB00">8.3 Закрытие файлов</span>
+
+Открытие файла потребляет ресурсы; если файлы не закрывать, процесс исчерпает доступные дескрипторы, и дальнейшие открытия станут невозможны. Поэтому после работы файл необходимо закрыть.
+
+### <span style="background-color:#008D00">8.3.1 Функция fclose</span>
+
+<span style="color:violet">__fclose__</span> закрывает поток, связанный с FILE*.
+
+Сигнатура: <span style="color:orange">_int fclose(FILE *stream);_</span>
+
+- Все буферизованные данные, не записанные в файл, <span style="color:orange">_iпринудительно сбрасываются_</span> (записываются); непрочитанные буферизованные данные отбрасываются.
+- Функция может завершиться ошибкой (например, нехватка места на диске, сбои NFS).  
+  Программисты часто игнорируют ошибки fclose, так как восстановление обычно невозможно. Типичная реакция - аварийное завершение процесса или усечение файла до осмысленного состояния.
+- После закрытия указатель FILE* становится <span style="color:orange">_неопределённым_</span>, использовать его нельзя. Возможность существования файлов с нулевой длиной зависит от реализации.
+- При нормальном завершении (exit или выход из main) все открытые файлы <span style="color:orange">_закрываются автоматически_</span>.  
+- При аварийном завершении корректного закрытия не происходит - буферизованные данные могут быть потеряны.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Завершение через abort может привести к потере буферизованных данных.
+
+### <span style="background-color:#008D00">8.3.2 Функция close (POSIX)</span>
+
+<span style="color:violet">__close__</span> освобождает файловый дескриптор.
+
+Сигнатура: <span style="color:orange">_int close(int fildes);_</span>
+
+- При ошибке ввода/вывода во время закрытия возвращает -1 и устанавливает errno в EIO. В этом случае состояние дескриптора становится <span style="color:orange">_неопределённым_</span>: его нельзя больше использовать для чтения, записи или повторного закрытия.
+- После успешного закрытия целочисленный дескриптор перестаёт быть связанным с файлом.
+- Файлы автоматически закрываются при завершении процесса-владельца.
+
+<span style="color:violet">__Правило соответствия__</span>: 
+- Файлы, открытые через fopen, закрываются fclose.  
+- Файлы, открытые через open, закрываются close.  
+- Если дескриптор, полученный из open, был передан в fdopen, для закрытия следует использовать fclose.
+
+## <span style="background-color:#00AB00">8.4 Чтение и запись символов и строк</span>
+
+В <span style="color:orange">_<stdio.h>_</span> определены функции для байтовых потоков, в <span style="color:orange">_<wchar.h>_</span> - их широкосимвольные аналоги (см. табл.). 
+
+| char | wchar_t | Описание |
+|--------|-----------|----------|
+| fgetc | fgetwc | Читает символ из потока |
+| getc | getwc | Читает символ из потока (часто макрос) |
+| getchar | getwchar | Читает символ из stdin |
+| fgets | fgetws | Читает строку из потока |
+| fputc | fputwc | Записывает символ в поток |
+| putc | putwc | Записывает символ в поток (часто макрос) |
+| fputs | fputws | Записывает строку в поток |
+| putchar | putwchar | Записывает символ в stdout |
+| puts | - | Записывает строку в stdout |
+| ungetc | ungetwc | Возвращает символ в поток |
+| scanf | wscanf | Читает форматированный ввод из stdin |
+| fscanf | fwscanf | Читает форматированный ввод из потока |
+| sscanf | swscanf | Читает форматированный ввод из буфера |
+| printf | wprintf | Записывает форматированный вывод в stdout |
+| fprintf | fwprintf | Записывает форматированный вывод в поток |
+| sprintf | swprintf | Записывает форматированный вывод в буфер |
+| snprintf | - | То же, что sprintf с усечением; swprintf принимает длину, но интерпретирует её иначе |
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Широкосимвольные функции лучше избегать, отдавая приоритет методам кодирования UTF-8, т.к. они менее подвержены ошибкам и уязвимостям.
+
+### <span style="background-color:#008D00">8.4.1 Функции вывода</span>
+
+- <span style="color:violet">__fputc__</span> - записывает символ c, приведённый к unsigned char, в поток stream.  
+  Сигнатура: <span style="color:orange">_int fputc(int c, FILE *stream);_</span>  
+  Возвращает записанный символ или EOF при ошибке.
+
+- <span style="color:violet">__putc__</span> - эквивалент fputc, но в большинстве сред реализован как макрос.  
+  Сигнатура: <span style="color:orange">_int putc(int c, FILE *stream);_</span>  
+  <span style="background-color:red; color:black">АЛАРМ!</span> Если putc - макрос, он может вычислять аргументы несколько раз. Не передавайте выражения с побочными эффектами (правило <span style="color:orange">_FIO41‑C_</span> CERT C). Безопаснее использовать fputc.
+
+- <span style="color:violet">__putchar__</span> - эквивалент putc(c, stdout).
+
+- <span style="color:violet">__fputs__</span> - записывает строку s в поток stream (без нулевого байта и без добавления перевода строки).  
+  Сигнатура: <span style="color:orange">_int fputs(const char * restrict s, FILE * restrict stream);_</span>  
+  Возвращает неотрицательное значение при успехе, EOF при ошибке.  
+  Пример:  
+  ```c
+  fputs("I ", stdout);
+  fputs("am ", stdout);
+  fputs("Groot\n", stdout);
+  ```
+  Вывод: <span style="color:orange">_I am Groot_</span> (с переводом строки).
+
+- <span style="color:violet">__puts__</span> - записывает строку s в stdout и добавляет перевод строки.  
+  Сигнатура: <span style="color:orange">_int puts(const char *s);_</span>  
+  Удобна для вывода простых сообщений (один аргумент).  
+  Пример: <span style="color:orange">_puts("This is a message.");_</span>
+
+### <span style="background-color:#008D00">8.4.2 Функции ввода</span>
+
+- <span style="color:violet">__fgetc__</span> - читает следующий символ из потока как unsigned char, возвращает значение, приведённое к int.  
+  Сигнатура: <span style="color:orange">_int fgetc(FILE *stream);_</span>  
+  Возвращает EOF при конце файла или ошибке.
+
+- <span style="color:violet">__fgets__</span> - читает из потока в массив s <span style="color:orange">_не более n-1_</span> символов или до первого перевода строки; добавляет нуль‑символ в конец.  
+  Сигнатура: <span style="color:orange">_char *fgets(char * restrict s, int n, FILE * restrict stream);_</span>
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Функция gets не ограничивает длину ввода, признана устаревшей в C99 и удалена из C11. <span style="color:orange">_Никогда не используйте gets_</span>. Для чтения строки из stdin применяйте fgets.
+
+## <span style="background-color:#00AB00">8.5 Сброс потока на диск</span>
+
+Функция <span style="color:violet">__fflush__</span> принудительно передаёт любые несохранённые данные из выходного буфера потока среде выполнения для записи в файл.
+
+Сигнатура: <span style="color:orange">_int fflush(FILE *stream);_</span>
+
+- Если последней операцией с потоком был ввод, <span style="color:orange">_поведение не определено_</span>.
+- Если stream - нулевой указатель, fflush сбрасывает <span style="color:orange">_все открытые потоки_</span> (вот это точно ААААААЛААААААРМ).
+- При ошибке записи устанавливает код ошибки для потока и возвращает EOF; при успехе возвращает 0.
+
+Актуально для частично или полностью буферизованных потоков, особенно при риске преждевременного завершения программы.
+
+## <span style="background-color:#00AB00">8.6 Установка позиции в файле</span>
+
+Потоки с произвольным доступом (дисковые файлы, но не терминал) хранят <span style="color:violet">__текущую позицию__</span> - участок файла, используемый для чтения/записи в настоящее время. При открытии позиция равна началу файла.
+
+### <span style="background-color:#008D00">8.6.1 ftell и fseek</span>
+
+- <span style="color:violet">__ftell__</span> - возвращает текущую позицию в виде long int`  
+  Сигнатура: <span style="color:orange">_long int ftell(FILE *stream);_</span>  
+  При ошибке возвращает -1L и устанавливает errno.
+- <span style="color:violet">__fseek__</span> - устанавливает позицию.  
+  Сигнатура: <span style="color:orange">_int fseek(FILE *stream, long int offset, int whence);_</span>  
+  whence может быть <span style="color:violet">__SEEK_SET__</span> (начало), <span style="color:violet">__SEEK_CUR__</span> (текущая), <span style="color:violet">__SEEK_END__</span> (конец).  
+  Возвращает ненулевое значение при ошибке, 0 при успехе.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(void) {
+  FILE *fp = fopen("fred.txt", "r");
+  if (fp == NULL) {
+    fputs("Cannot open fred.txt file\n", stderr);
+    return EXIT_FAILURE;
+  }
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    fputs("Seek to end of file failed\n", stderr);
+    return EXIT_FAILURE;
+  }
+  long int fpi = ftell(fp);
+  if (fpi == -1L) {
+    perror("Tell");
+    return EXIT_FAILURE;
+  }
+  printf("file position = %ld\n", fpi);
+  if (fclose(fp) == EOF) {
+    fputs("Failed to close file\n", stderr);
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> ftell и fseek используют long int, что <span style="color:orange">_ограничивает максимальный размер файла_</span>. Для сколь угодно больших файлов применяйте fgetpos/fsetpos.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Каждая функция сообщает об ошибках по‑своему (см. документацию). В коде <span style="color:orange">_необходима проверка_</span> всех возвращаемых значений.
+
+### <span style="background-color:#008D00">8.6.2 fgetpos и fsetpos</span>
+
+- <span style="color:violet">__fgetpos__</span> - сохраняет текущую позицию (и состояние разбора для широких потоков) в объект типа <span style="color:orange">_fpos_t_</span>.
+- <span style="color:violet">__fsetpos__</span> - восстанавливает позицию из ранее сохранённого <span style="color:orange">_fpos_t_</span>.
+
+Тип <span style="color:violet">__fpos_t_</span> способен представлять сколь угодно большие смещения.  
+Успешный вызов fgetpos сохраняет многобайтное состояние разбора (если есть), а последующий fsetpos с тем же значением fpos_t восстанавливает и позицию, и состояние разбора.  
+Преобразовать fpos_t в целочисленное смещение можно только косвенно, через fsetpos и затем ftell.
+
+```c
+FILE *fp = fopen("fred.txt", "w+");
+fpos_t pos;
+fgetpos(fp, &pos);                           // запомнили начало
+fputs("abcdefghijklmnopqrstuvwxyz", fp);     // записали длинную строку
+fsetpos(fp, &pos);                           // вернулись в начало
+printf("file position = %ld\n", ftell(fp));  // 0
+fputs("0123456789", fp);                     // затёрли первые 10 символов
+fclose(fp);
+```
+Результирующее содержимое файла: 0123456789klmnopqrstuvwxyz
+
+### <span style="background-color:#008D00">8.6.3 rewind</span>
+
+<span style="color:violet">__rewind__</span> устанавливает позицию в начало файла и очищает индикатор ошибки потока.  
+Сигнатура: <span style="color:orange">_void rewind(FILE *stream);_</span>  
+Эквивалент:  
+```c
+fseek(stream, 0L, SEEK_SET);
+clearerr(stream);
+```
+
+### <span style="background-color:#008D00">8.6.4 Важные правила</span>
+
+- <span style="color:orange">_Нельзя переключаться_</span> между чтением и записью без промежуточного вызова fflush или функции позиционирования (fseek, fsetpos, rewind). Это же относится к переходу от записи к чтению.
+- В файлах, открытых в режиме присоединения ("a"), изменение позиции <span style="color:orange">_игнорируется или сбрасывается в конец_</span> при записи. Не пытайтесь управлять позицией в таких файлах.
+- API в POSIX и Windows могут использовать смещение, передаваемое явно, без опоры на текущую позицию.
+
+## <span style="background-color:#00AB00">8.7 Удаление и переименование файлов</span>
+
+- <span style="color:violet">__remove__</span> - удаляет файл.  
+  Сигнатура: <span style="color:orange">_int remove(const char *filename);_</span>
+- <span style="color:violet">__rename__</span> - переименовывает файл.  
+  Сигнатура: <span style="color:orange">_int rename(const char *old, const char *new);_</span>
+
+В POSIX для удаления используется <span style="color:violet">__unlink__</span>:
+- <span style="color:violet">__unlink__</span> удаляет запись о файле из каталога; сам файл удаляется только после того, как на него не останется ни одной ссылки (в том числе открытых дескрипторов).  
+  Сигнатура: <span style="color:orange">_int unlink(const char *path);_</span>
+- remove в POSIX-системах ведёт себя как unlink, но в других ОС поведение может отличаться.
+- rename в POSIX работает аналогично стандартной rename.
+
+## <span style="background-color:#00AB00">8.8 Временные файлы</span>
+
+Временные файлы используются для межпроцессного взаимодействия или для временного сохранения данных на диске.
+
+<span style="color:violet">__Каталоги__</span>:
+- Глобальные: обычно /tmp, /var/tmp (переменная <span style="color:orange">_TMPDIR_</span> в Unix/Linux). В Windows: C:\Windows\Temp или %TMP%, %TEMP%, %USERPROFILE%.
+- Пользовательские: в Linux <span style="color:orange">_$XDG_RUNTIME_DIR_</span> (/run/user/$uid), в Windows <span style="color:orange">_%USERPROFILE%\AppData\Local\Temp_</span>.
+
+<span style="color:violet">__Функции__</span>:
+- Стандартные: <span style="color:violet">__tmpfile__</span>, <span style="color:violet">__tmpnam__</span>.
+- POSIX: <span style="color:violet">__mkstemp__</span> - самая безопасная для создания временных файлов.
+
+<span style="background-color:red; color:black">АЛАРМ!</span> Использование глобальных временных каталогов часто ведёт к уязвимостям. Для межпроцессного взаимодействия рекомендуется применять сокеты, разделяемую память и другие механизмы вместо временных файлов. Каждому пользователю лучше работать с собственным временным каталогом.
+
+## <span style="background-color:#00AB00">8.9 Чтение потоков форматированного текста (fscanf)</span>
+
+<span style="color:violet">__fscanf__</span> читает форматированный ввод из потока.  
+Сигнатура: <span style="color:orange">_int fscanf(FILE * restrict stream, const char * restrict format, ...);_</span>
+
+- Строка format определяет, сколько и каких аргументов ожидается, как их преобразовывать.
+- Последующие аргументы - указатели на объекты, куда присваивается ввод.
+- Количество аргументов должно соответствовать спецификаторам в format (меньше - UB, больше - лишние игнорируются).
+- Возвращает EOF при ошибке до первого преобразования, иначе - количество успешно присвоенных элементов (может быть меньше указанного или ноль).
+
+<span style="color:violet">__Спецификаторы преобразования__</span> имеют формат: <span style="color:orange">_%[*][ширина][модификатор]тип_</span>
+- * - подавляет присваивание (ввод считывается, но <span style="color:orange">_не сохраняется_</span>).
+- ширина - максимальное число символов для чтения (если не указать - то размер ввода зависит от типа, который по умолчанию использует спецификатор преобразования).
+- модификатор - размер объекта (например, `l` для `long`).
+- тип - символ, задающий преобразование (`d`, `s`, `[ ]` и т.д.).
+
+> Пример. Пусть нам необходимо сохранить из текстового файла все переданные сигналы. Структура для хранения записи о сигнале:
+```c
+struct sigrecord {
+    int signum;
+    char signame[10];
+    char sigdesc[100];
+} sigrec;
+```
+> Чтение строки файла signals.txt формата "номер ID описание":
+```c
+int n = fscanf(in, "%d%9s%*[ \t]%99[^\n]",
+               &sigrec.signum, sigrec.signame, sigrec.sigdesc);
+```
+- <span style="color:orange">_%d_</span> - читает десятичное целое (номер сигнала) в sigrec.signum.
+- <span style="color:orange">_%9s_</span> - читает не более 9 непробельных символов в sigrec.signame (автоматически добавляет '\0').
+- <span style="color:orange">_%*[ \t]_</span> - подавляет присваивание, считывает пробелы и табуляции между ID и описанием.
+- <span style="color:orange">_%99[^\n]_</span> - читает до 99 любых символов, кроме `\n`, в sigrec.sigdesc, описывая <span style="color:violet">__множество поиска__</span> (по сути, паттерн, указывающий какие символы надо или не надо читать).
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> При использовании %s (или %[...]) <span style="color:orange">_всегда указывайте_</span> максимальную ширину, чтобы избежать переполнения буфера. Или проверяйте длину ввода, чтобы она не превышала размер буфера
+
+## <span style="background-color:#00AB00">8.10 Чтение и запись двоичных потоков</span>
+
+- <span style="color:violet">__fwrite__</span> - записывает массив элементов в поток.  
+  Сигнатура: <span style="color:orange">_size_t fwrite(const void * restrict ptr, size_t size, size_t nmemb, FILE * restrict stream);_</span>
+  Записывает до nmemb элементов размером size каждый из ptr; возвращает количество успешно записанных элементов. Перед записью объект интерпретируется как массив unsigned char.
+- <span style="color:violet">__fread__</span> - читает элементы из потока.  
+  Сигнатура: <span style="color:orange">_size_t fread(void * restrict ptr, size_t size, size_t nmemb, FILE * restrict stream);_</span>
+  Читает до nmemb элементов размером size в буфер ptr; возвращает количество успешно прочитанных элементов.
+
+```c
+typedef struct sigrecord {
+    int signum;
+    char signame[10];
+    char sigdesc[100];
+} sigrecord;
+
+FILE *fp = fopen("signals.txt", "wb");
+sigrecord sigrec30 = { 30, "USR1", "user-defined signal 1" };
+sigrecord sigrec31 = { .signum = 31, .signame = "USR2", .sigdesc = "user-defined signal 2" };
+size_t size = sizeof(sigrecord);
+
+if (fwrite(&sigrec30, size, 1, fp) != 1) { /* ошибка */ }
+if (fwrite(&sigrec31, size, 1, fp) != 1) { /* ошибка */ }
+fclose(fp);
+```
+
+```c
+FILE *fp = fopen("signals.txt", "rb");
+sigrecord sigrec;
+size_t size = sizeof(sigrecord);
+// смещаемся ко второму сигналу (позиция = size)
+if (fseek(fp, size, SEEK_SET) != 0) { /* ошибка */ }
+if (fread(&sigrec, size, 1, fp) != 1) { /* ошибка */ }
+printf("Signal\n number = %d\n name = %s\n description = %s\n\n",
+       sigrec.signum, sigrec.signame, sigrec.sigdesc);
+fclose(fp);
+```
+
+<span style="color:violet">__Порядок байтов (endianness)__</span>:
+Двоичные файлы могут быть не переносимы между системами из-за разного порядка байтов:
+- <span style="color:violet">__Little-endian__</span> - младший байт первым (x86, AMD).
+- <span style="color:violet">__Big-endian__</span> - старший байт первым (сетевые протоколы IP, TCP, UDP; некоторые ARM/POWER).
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Для переносимости всегда сохраняйте двоичные данные в одном зафиксированном порядке байтов или добавляйте в файл поле, указывающее выбранный формат.
