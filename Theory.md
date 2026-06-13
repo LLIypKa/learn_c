@@ -85,7 +85,7 @@ int main() {
 </span>
 
 ### <span style="background-color:red; color:black">__Спецификаторы формата__</span> (не все)
-1. <span style="color:violet">__%s__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_строку_</span>
+1. <span style="color:violet">__%s__</span> или <span style="color:violet">__%[]__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_строку_</span>
 2. <span style="color:violet">__%d__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_целое число_</span>
 3. <span style="color:violet">__%f__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_число с плавающей точкой_</span>
 4. <span style="color:violet">__%c__</span> - спецификатор формата, позволяющий вывести очередной аргумент - <span style="color:orange">_символ_</span>
@@ -3972,3 +3972,111 @@ clearerr(stream);
 - <span style="color:orange">_Нельзя переключаться_</span> между чтением и записью без промежуточного вызова fflush или функции позиционирования (fseek, fsetpos, rewind). Это же относится к переходу от записи к чтению.
 - В файлах, открытых в режиме присоединения ("a"), изменение позиции <span style="color:orange">_игнорируется или сбрасывается в конец_</span> при записи. Не пытайтесь управлять позицией в таких файлах.
 - API в POSIX и Windows могут использовать смещение, передаваемое явно, без опоры на текущую позицию.
+
+## <span style="background-color:#00AB00">8.7 Удаление и переименование файлов</span>
+
+- <span style="color:violet">__remove__</span> - удаляет файл.  
+  Сигнатура: <span style="color:orange">_int remove(const char *filename);_</span>
+- <span style="color:violet">__rename__</span> - переименовывает файл.  
+  Сигнатура: <span style="color:orange">_int rename(const char *old, const char *new);_</span>
+
+В POSIX для удаления используется <span style="color:violet">__unlink__</span>:
+- <span style="color:violet">__unlink__</span> удаляет запись о файле из каталога; сам файл удаляется только после того, как на него не останется ни одной ссылки (в том числе открытых дескрипторов).  
+  Сигнатура: <span style="color:orange">_int unlink(const char *path);_</span>
+- remove в POSIX-системах ведёт себя как unlink, но в других ОС поведение может отличаться.
+- rename в POSIX работает аналогично стандартной rename.
+
+## <span style="background-color:#00AB00">8.8 Временные файлы</span>
+
+Временные файлы используются для межпроцессного взаимодействия или для временного сохранения данных на диске.
+
+<span style="color:violet">__Каталоги__</span>:
+- Глобальные: обычно /tmp, /var/tmp (переменная <span style="color:orange">_TMPDIR_</span> в Unix/Linux). В Windows: C:\Windows\Temp или %TMP%, %TEMP%, %USERPROFILE%.
+- Пользовательские: в Linux <span style="color:orange">_$XDG_RUNTIME_DIR_</span> (/run/user/$uid), в Windows <span style="color:orange">_%USERPROFILE%\AppData\Local\Temp_</span>.
+
+<span style="color:violet">__Функции__</span>:
+- Стандартные: <span style="color:violet">__tmpfile__</span>, <span style="color:violet">__tmpnam__</span>.
+- POSIX: <span style="color:violet">__mkstemp__</span> - самая безопасная для создания временных файлов.
+
+<span style="background-color:red; color:black">АЛАРМ!</span> Использование глобальных временных каталогов часто ведёт к уязвимостям. Для межпроцессного взаимодействия рекомендуется применять сокеты, разделяемую память и другие механизмы вместо временных файлов. Каждому пользователю лучше работать с собственным временным каталогом.
+
+## <span style="background-color:#00AB00">8.9 Чтение потоков форматированного текста (fscanf)</span>
+
+<span style="color:violet">__fscanf__</span> читает форматированный ввод из потока.  
+Сигнатура: <span style="color:orange">_int fscanf(FILE * restrict stream, const char * restrict format, ...);_</span>
+
+- Строка format определяет, сколько и каких аргументов ожидается, как их преобразовывать.
+- Последующие аргументы - указатели на объекты, куда присваивается ввод.
+- Количество аргументов должно соответствовать спецификаторам в format (меньше - UB, больше - лишние игнорируются).
+- Возвращает EOF при ошибке до первого преобразования, иначе - количество успешно присвоенных элементов (может быть меньше указанного или ноль).
+
+<span style="color:violet">__Спецификаторы преобразования__</span> имеют формат: <span style="color:orange">_%[*][ширина][модификатор]тип_</span>
+- * - подавляет присваивание (ввод считывается, но <span style="color:orange">_не сохраняется_</span>).
+- ширина - максимальное число символов для чтения (если не указать - то размер ввода зависит от типа, который по умолчанию использует спецификатор преобразования).
+- модификатор - размер объекта (например, `l` для `long`).
+- тип - символ, задающий преобразование (`d`, `s`, `[ ]` и т.д.).
+
+> Пример. Пусть нам необходимо сохранить из текстового файла все переданные сигналы. Структура для хранения записи о сигнале:
+```c
+struct sigrecord {
+    int signum;
+    char signame[10];
+    char sigdesc[100];
+} sigrec;
+```
+> Чтение строки файла signals.txt формата "номер ID описание":
+```c
+int n = fscanf(in, "%d%9s%*[ \t]%99[^\n]",
+               &sigrec.signum, sigrec.signame, sigrec.sigdesc);
+```
+- <span style="color:orange">_%d_</span> - читает десятичное целое (номер сигнала) в sigrec.signum.
+- <span style="color:orange">_%9s_</span> - читает не более 9 непробельных символов в sigrec.signame (автоматически добавляет '\0').
+- <span style="color:orange">_%*[ \t]_</span> - подавляет присваивание, считывает пробелы и табуляции между ID и описанием.
+- <span style="color:orange">_%99[^\n]_</span> - читает до 99 любых символов, кроме `\n`, в sigrec.sigdesc, описывая <span style="color:violet">__множество поиска__</span> (по сути, паттерн, указывающий какие символы надо или не надо читать).
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> При использовании %s (или %[...]) <span style="color:orange">_всегда указывайте_</span> максимальную ширину, чтобы избежать переполнения буфера. Или проверяйте длину ввода, чтобы она не превышала размер буфера
+
+## <span style="background-color:#00AB00">8.10 Чтение и запись двоичных потоков</span>
+
+- <span style="color:violet">__fwrite__</span> - записывает массив элементов в поток.  
+  Сигнатура: <span style="color:orange">_size_t fwrite(const void * restrict ptr, size_t size, size_t nmemb, FILE * restrict stream);_</span>
+  Записывает до nmemb элементов размером size каждый из ptr; возвращает количество успешно записанных элементов. Перед записью объект интерпретируется как массив unsigned char.
+- <span style="color:violet">__fread__</span> - читает элементы из потока.  
+  Сигнатура: <span style="color:orange">_size_t fread(void * restrict ptr, size_t size, size_t nmemb, FILE * restrict stream);_</span>
+  Читает до nmemb элементов размером size в буфер ptr; возвращает количество успешно прочитанных элементов.
+
+```c
+typedef struct sigrecord {
+    int signum;
+    char signame[10];
+    char sigdesc[100];
+} sigrecord;
+
+FILE *fp = fopen("signals.txt", "wb");
+sigrecord sigrec30 = { 30, "USR1", "user-defined signal 1" };
+sigrecord sigrec31 = { .signum = 31, .signame = "USR2", .sigdesc = "user-defined signal 2" };
+size_t size = sizeof(sigrecord);
+
+if (fwrite(&sigrec30, size, 1, fp) != 1) { /* ошибка */ }
+if (fwrite(&sigrec31, size, 1, fp) != 1) { /* ошибка */ }
+fclose(fp);
+```
+
+```c
+FILE *fp = fopen("signals.txt", "rb");
+sigrecord sigrec;
+size_t size = sizeof(sigrecord);
+// смещаемся ко второму сигналу (позиция = size)
+if (fseek(fp, size, SEEK_SET) != 0) { /* ошибка */ }
+if (fread(&sigrec, size, 1, fp) != 1) { /* ошибка */ }
+printf("Signal\n number = %d\n name = %s\n description = %s\n\n",
+       sigrec.signum, sigrec.signame, sigrec.sigdesc);
+fclose(fp);
+```
+
+<span style="color:violet">__Порядок байтов (endianness)__</span>:
+Двоичные файлы могут быть не переносимы между системами из-за разного порядка байтов:
+- <span style="color:violet">__Little-endian__</span> - младший байт первым (x86, AMD).
+- <span style="color:violet">__Big-endian__</span> - старший байт первым (сетевые протоколы IP, TCP, UDP; некоторые ARM/POWER).
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Для переносимости всегда сохраняйте двоичные данные в одном зафиксированном порядке байтов или добавляйте в файл поле, указывающее выбранный формат.
