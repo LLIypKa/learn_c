@@ -3813,3 +3813,162 @@ POSIX-интерфейсы на основе дескрипторов дают �
 - Файлы, открытые через fopen, закрываются fclose.  
 - Файлы, открытые через open, закрываются close.  
 - Если дескриптор, полученный из open, был передан в fdopen, для закрытия следует использовать fclose.
+
+## <span style="background-color:#00AB00">8.4 Чтение и запись символов и строк</span>
+
+В <span style="color:orange">_<stdio.h>_</span> определены функции для байтовых потоков, в <span style="color:orange">_<wchar.h>_</span> - их широкосимвольные аналоги (см. табл.). 
+
+| char | wchar_t | Описание |
+|--------|-----------|----------|
+| fgetc | fgetwc | Читает символ из потока |
+| getc | getwc | Читает символ из потока (часто макрос) |
+| getchar | getwchar | Читает символ из stdin |
+| fgets | fgetws | Читает строку из потока |
+| fputc | fputwc | Записывает символ в поток |
+| putc | putwc | Записывает символ в поток (часто макрос) |
+| fputs | fputws | Записывает строку в поток |
+| putchar | putwchar | Записывает символ в stdout |
+| puts | - | Записывает строку в stdout |
+| ungetc | ungetwc | Возвращает символ в поток |
+| scanf | wscanf | Читает форматированный ввод из stdin |
+| fscanf | fwscanf | Читает форматированный ввод из потока |
+| sscanf | swscanf | Читает форматированный ввод из буфера |
+| printf | wprintf | Записывает форматированный вывод в stdout |
+| fprintf | fwprintf | Записывает форматированный вывод в поток |
+| sprintf | swprintf | Записывает форматированный вывод в буфер |
+| snprintf | - | То же, что sprintf с усечением; swprintf принимает длину, но интерпретирует её иначе |
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Широкосимвольные функции лучше избегать, отдавая приоритет методам кодирования UTF-8, т.к. они менее подвержены ошибкам и уязвимостям.
+
+### <span style="background-color:#008D00">8.4.1 Функции вывода</span>
+
+- <span style="color:violet">__fputc__</span> - записывает символ c, приведённый к unsigned char, в поток stream.  
+  Сигнатура: <span style="color:orange">_int fputc(int c, FILE *stream);_</span>  
+  Возвращает записанный символ или EOF при ошибке.
+
+- <span style="color:violet">__putc__</span> - эквивалент fputc, но в большинстве сред реализован как макрос.  
+  Сигнатура: <span style="color:orange">_int putc(int c, FILE *stream);_</span>  
+  <span style="background-color:red; color:black">АЛАРМ!</span> Если putc - макрос, он может вычислять аргументы несколько раз. Не передавайте выражения с побочными эффектами (правило <span style="color:orange">_FIO41‑C_</span> CERT C). Безопаснее использовать fputc.
+
+- <span style="color:violet">__putchar__</span> - эквивалент putc(c, stdout).
+
+- <span style="color:violet">__fputs__</span> - записывает строку s в поток stream (без нулевого байта и без добавления перевода строки).  
+  Сигнатура: <span style="color:orange">_int fputs(const char * restrict s, FILE * restrict stream);_</span>  
+  Возвращает неотрицательное значение при успехе, EOF при ошибке.  
+  Пример:  
+  ```c
+  fputs("I ", stdout);
+  fputs("am ", stdout);
+  fputs("Groot\n", stdout);
+  ```
+  Вывод: <span style="color:orange">_I am Groot_</span> (с переводом строки).
+
+- <span style="color:violet">__puts__</span> - записывает строку s в stdout и добавляет перевод строки.  
+  Сигнатура: <span style="color:orange">_int puts(const char *s);_</span>  
+  Удобна для вывода простых сообщений (один аргумент).  
+  Пример: <span style="color:orange">_puts("This is a message.");_</span>
+
+### <span style="background-color:#008D00">8.4.2 Функции ввода</span>
+
+- <span style="color:violet">__fgetc__</span> - читает следующий символ из потока как unsigned char, возвращает значение, приведённое к int.  
+  Сигнатура: <span style="color:orange">_int fgetc(FILE *stream);_</span>  
+  Возвращает EOF при конце файла или ошибке.
+
+- <span style="color:violet">__fgets__</span> - читает из потока в массив s <span style="color:orange">_не более n-1_</span> символов или до первого перевода строки; добавляет нуль‑символ в конец.  
+  Сигнатура: <span style="color:orange">_char *fgets(char * restrict s, int n, FILE * restrict stream);_</span>
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Функция gets не ограничивает длину ввода, признана устаревшей в C99 и удалена из C11. <span style="color:orange">_Никогда не используйте gets_</span>. Для чтения строки из stdin применяйте fgets.
+
+## <span style="background-color:#00AB00">8.5 Сброс потока на диск</span>
+
+Функция <span style="color:violet">__fflush__</span> принудительно передаёт любые несохранённые данные из выходного буфера потока среде выполнения для записи в файл.
+
+Сигнатура: <span style="color:orange">_int fflush(FILE *stream);_</span>
+
+- Если последней операцией с потоком был ввод, <span style="color:orange">_поведение не определено_</span>.
+- Если stream - нулевой указатель, fflush сбрасывает <span style="color:orange">_все открытые потоки_</span> (вот это точно ААААААЛААААААРМ).
+- При ошибке записи устанавливает код ошибки для потока и возвращает EOF; при успехе возвращает 0.
+
+Актуально для частично или полностью буферизованных потоков, особенно при риске преждевременного завершения программы.
+
+## <span style="background-color:#00AB00">8.6 Установка позиции в файле</span>
+
+Потоки с произвольным доступом (дисковые файлы, но не терминал) хранят <span style="color:violet">__текущую позицию__</span> - участок файла, используемый для чтения/записи в настоящее время. При открытии позиция равна началу файла.
+
+### <span style="background-color:#008D00">8.6.1 ftell и fseek</span>
+
+- <span style="color:violet">__ftell__</span> - возвращает текущую позицию в виде long int`  
+  Сигнатура: <span style="color:orange">_long int ftell(FILE *stream);_</span>  
+  При ошибке возвращает -1L и устанавливает errno.
+- <span style="color:violet">__fseek__</span> - устанавливает позицию.  
+  Сигнатура: <span style="color:orange">_int fseek(FILE *stream, long int offset, int whence);_</span>  
+  whence может быть <span style="color:violet">__SEEK_SET__</span> (начало), <span style="color:violet">__SEEK_CUR__</span> (текущая), <span style="color:violet">__SEEK_END__</span> (конец).  
+  Возвращает ненулевое значение при ошибке, 0 при успехе.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(void) {
+  FILE *fp = fopen("fred.txt", "r");
+  if (fp == NULL) {
+    fputs("Cannot open fred.txt file\n", stderr);
+    return EXIT_FAILURE;
+  }
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    fputs("Seek to end of file failed\n", stderr);
+    return EXIT_FAILURE;
+  }
+  long int fpi = ftell(fp);
+  if (fpi == -1L) {
+    perror("Tell");
+    return EXIT_FAILURE;
+  }
+  printf("file position = %ld\n", fpi);
+  if (fclose(fp) == EOF) {
+    fputs("Failed to close file\n", stderr);
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+```
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> ftell и fseek используют long int, что <span style="color:orange">_ограничивает максимальный размер файла_</span>. Для сколь угодно больших файлов применяйте fgetpos/fsetpos.
+
+> <span style="background-color:red; color:black">АЛАРМ!</span> Каждая функция сообщает об ошибках по‑своему (см. документацию). В коде <span style="color:orange">_необходима проверка_</span> всех возвращаемых значений.
+
+### <span style="background-color:#008D00">8.6.2 fgetpos и fsetpos</span>
+
+- <span style="color:violet">__fgetpos__</span> - сохраняет текущую позицию (и состояние разбора для широких потоков) в объект типа <span style="color:orange">_fpos_t_</span>.
+- <span style="color:violet">__fsetpos__</span> - восстанавливает позицию из ранее сохранённого <span style="color:orange">_fpos_t_</span>.
+
+Тип <span style="color:violet">__fpos_t_</span> способен представлять сколь угодно большие смещения.  
+Успешный вызов fgetpos сохраняет многобайтное состояние разбора (если есть), а последующий fsetpos с тем же значением fpos_t восстанавливает и позицию, и состояние разбора.  
+Преобразовать fpos_t в целочисленное смещение можно только косвенно, через fsetpos и затем ftell.
+
+```c
+FILE *fp = fopen("fred.txt", "w+");
+fpos_t pos;
+fgetpos(fp, &pos);                           // запомнили начало
+fputs("abcdefghijklmnopqrstuvwxyz", fp);     // записали длинную строку
+fsetpos(fp, &pos);                           // вернулись в начало
+printf("file position = %ld\n", ftell(fp));  // 0
+fputs("0123456789", fp);                     // затёрли первые 10 символов
+fclose(fp);
+```
+Результирующее содержимое файла: 0123456789klmnopqrstuvwxyz
+
+### <span style="background-color:#008D00">8.6.3 rewind</span>
+
+<span style="color:violet">__rewind__</span> устанавливает позицию в начало файла и очищает индикатор ошибки потока.  
+Сигнатура: <span style="color:orange">_void rewind(FILE *stream);_</span>  
+Эквивалент:  
+```c
+fseek(stream, 0L, SEEK_SET);
+clearerr(stream);
+```
+
+### <span style="background-color:#008D00">8.6.4 Важные правила</span>
+
+- <span style="color:orange">_Нельзя переключаться_</span> между чтением и записью без промежуточного вызова fflush или функции позиционирования (fseek, fsetpos, rewind). Это же относится к переходу от записи к чтению.
+- В файлах, открытых в режиме присоединения ("a"), изменение позиции <span style="color:orange">_игнорируется или сбрасывается в конец_</span> при записи. Не пытайтесь управлять позицией в таких файлах.
+- API в POSIX и Windows могут использовать смещение, передаваемое явно, без опоры на текущую позицию.
