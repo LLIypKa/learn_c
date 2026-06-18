@@ -4570,3 +4570,116 @@ struct collection_type {
 > Проектируй систему так, чтобы модули были независимы и скрывали детали реализации.
 
 > <span style="background-color:red; color:black">АЛАРМ!</span> <span style="color:orange">_Нельзя объявлять_</span> один и тот же идентификатор с конфликтующими компоновками (например, сначала static, а потом extern для него же в том же файле) - это ведёт к неопределённому поведению (правило <span style="color:orange">_DCL36-C_</span> CERT C).
+
+## <span style="background-color:#00AB00">10.5 Структурирование простой программы</span>
+
+Рассмотрим пример программы primetest, которая проверяет, является ли число простым. Она разделена на два компонента:
+
+*   <span style="color:violet">__Статическая библиотека__</span> (isprime) – реализует алгоритм проверки.
+*   <span style="color:violet">__Приложение командной строки__</span> (driver) – предоставляет пользовательский интерфейс и вызывает библиотеку.
+
+### <span style="background-color:#008D00">10.5.1 Вспомогательные функции приложения</span>
+
+Вывод справки (print_help)
+```c
+static void print_help(void) {
+    printf("%s", "primetest num1 [num2 num3 ... numN]\n\n");
+    printf("%s", "Tests positive integers for primality. Supports testing ");
+    printf("%s [2-%llu].\n", "numbers in the range", ULLONG_MAX);
+}
+```
+
+Преобразование аргумента (convert_arg)
+Преобразует строку `arg` в `unsigned long long` через `strtoull` с обработкой ошибок. Возвращает `true` при успехе.
+- Очищает `errno` перед вызовом.
+- Отвергает значения `<= 1` (не являются простыми).
+- При ошибке (`*val == ULLONG_MAX` или `0` и установлен `errno`, или `end == arg`) возвращает `false`.
+
+```c
+static bool convert_arg(const char *arg, unsigned long long *val) {
+    char *end;
+    errno = 0;
+    *val = strtoull(arg, &end, 10);
+    if ((*val == ULLONG_MAX) && errno) return false;
+    if (*val == 0 && errno) return false;
+    if (end == arg) return false;
+    if (*val <= 1) return false;
+    return true;
+}
+```
+
+Обработка всех аргументов (`convert_command_line_args`)
+- При отсутствии аргументов выводит справку и возвращает `NULL`.
+- Динамически выделяет массив `unsigned long long` под `(argc - 1)` элементов.
+- Для каждого аргумента вызывает `convert_arg`; при первой же неудаче освобождает память, выводит справку и возвращает `NULL`.
+- При успехе записывает количество преобразованных аргументов в `*num_args` и возвращает массив.
+
+### <span style="background-color:#008D00">10.5.2 Библиотека проверки простоты (алгоритм Миллера–Рабина)</span>
+
+Тест Миллера–Рабина (miller_rabin_test)
+Вероятностный алгоритм, использует вспомогательную функцию power (модульное возведение в степень).
+
+Публичный интерфейс (`is_prime`)
+```c
+bool is_prime(unsigned long long n, unsigned int k);
+```
+- `n` – проверяемое число.
+- `k` – количество раундов теста (чем больше, тем выше точность).
+- Возвращает `true`, если число, вероятно, простое.
+- Сразу отвергает `n <= 1`, `n == 4`; принимает `n <= 3`.
+
+### <span style="background-color:#008D00">10.5.3 Точка входа (`main`)</span>
+
+```c
+int main(int argc, char *argv[]) {
+    size_t num_args;
+    unsigned long long *vals = convert_command_line_args(argc, argv, &num_args);
+    if (!vals) return EXIT_FAILURE;
+
+    for (size_t i = 0; i < num_args; ++i) {
+        printf("%llu is %s.\n", vals[i],
+               is_prime(vals[i], 100) ? "probably prime" : "not prime");
+    }
+    free(vals);
+    return EXIT_SUCCESS;
+}
+```
+- Получает преобразованные аргументы.
+- Для каждого числа вызывает `is_prime` со 100 раундами.
+- Освобождает выделенную память.
+
+### <span style="background-color:#00AB00">10.6 Сборка кода</span>
+
+Исходные файлы:
+- `isprime.h` – публичный интерфейс библиотеки (со стражем включения).
+- `isprime.c` – реализация алгоритма Миллера–Рабина.
+- `driver.c` – служебные функции и `main`.
+
+Создание статической библиотеки:
+```bash
+# Компиляция объектных файлов
+clang -c -std=c17 -Wall -Wextra -pedantic -Werror isprime.c -o bin/isprime.o
+clang -c -std=c17 -Wall -Wextra -pedantic -Werror driver.c -o bin/driver.o
+
+# Упаковка объектного файла isprime.o в статическую библиотеку
+ar rcs bin/libPrimalityUtilities.a bin/isprime.o
+```
+Параметры `ar`: `r` – замена, `c` – создание, `s` – индекс (как `ranlib`).
+
+Компоновка исполняемого файла:
+```bash
+clang bin/driver.o -Lbin -lPrimalityUtilities -o bin/primetest
+```
+- `-Lbin` – искать библиотеки в `bin`.
+- `-lPrimalityUtilities` – подключить `libPrimalityUtilities.a` (префикс `lib` и расширение `.a` добавляются автоматически).
+
+Запуск:
+```
+$ ./bin/primetest 899180
+899180 is not prime
+$ ./bin/primetest 8675309
+8675309 is probably prime
+$ ./bin/primetest 0
+primetest num1 [num2 num3 ... numN]
+... (справка)
+```
